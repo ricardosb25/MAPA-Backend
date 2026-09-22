@@ -1,57 +1,139 @@
 package com.mapa.exception;
 
+import com.mapa.dto.ApiErrorDTO;
+import com.mapa.dto.FieldValidationErrorDTO;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.OffsetDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<Map<String, Object>> handleEmailAlreadyExists(EmailAlreadyExistsException exception) {
-        return errorResponse(HttpStatus.CONFLICT, exception.getMessage());
+    public ResponseEntity<ApiErrorDTO> handleEmailAlreadyExists(
+            EmailAlreadyExistsException emailAlreadyExistsException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                emailAlreadyExistsException.getMessage(),
+                httpRequest,
+                List.of());
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidCredentials(InvalidCredentialsException exception) {
-        return errorResponse(HttpStatus.UNAUTHORIZED, exception.getMessage());
+    public ResponseEntity<ApiErrorDTO> handleInvalidCredentials(
+            InvalidCredentialsException invalidCredentialsException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                invalidCredentialsException.getMessage(),
+                httpRequest,
+                List.of());
     }
 
     @ExceptionHandler(RoleNotAllowedException.class)
-    public ResponseEntity<Map<String, Object>> handleRoleNotAllowed(RoleNotAllowedException exception) {
-        return errorResponse(HttpStatus.FORBIDDEN, exception.getMessage());
-    }
+    public ResponseEntity<ApiErrorDTO> handleRoleNotAllowed(
+            RoleNotAllowedException roleNotAllowedException, HttpServletRequest httpRequest) {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException exception) {
-        return errorResponse(HttpStatus.NOT_FOUND, exception.getMessage());
+        return buildErrorResponse(
+                HttpStatus.FORBIDDEN,
+                roleNotAllowedException.getMessage(),
+                httpRequest,
+                List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException exception) {
-        Map<String, String> details = new HashMap<>();
-        exception.getBindingResult().getFieldErrors()
-                .forEach(fieldError -> details.put(fieldError.getField(), fieldError.getDefaultMessage()));
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", OffsetDateTime.now().toString());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Dados inválidos");
-        body.put("details", details);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    public ResponseEntity<ApiErrorDTO> handleInvalidRequestBody(
+            MethodArgumentNotValidException validationException, HttpServletRequest httpRequest) {
+
+        List<FieldValidationErrorDTO> fieldErrors = validationException.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(fieldError -> new FieldValidationErrorDTO(fieldError.getField(), fieldError.getDefaultMessage()))
+                .toList();
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Um ou mais campos da requisição são inválidos",
+                httpRequest,
+                fieldErrors);
     }
 
-    private ResponseEntity<Map<String, Object>> errorResponse(HttpStatus status, String message) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", OffsetDateTime.now().toString());
-        body.put("status", status.value());
-        body.put("error", message);
-        return ResponseEntity.status(status).body(body);
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorDTO> handleResourceNotFound(
+            ResourceNotFoundException resourceNotFoundException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                resourceNotFoundException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorDTO> handleUnreadableRequestBody(HttpServletRequest httpRequest) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Corpo da requisição ausente ou malformado",
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorDTO> handleDataIntegrityViolation(HttpServletRequest httpRequest) {
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                "A operação viola uma restrição de integridade dos dados",
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiErrorDTO> handleInvalidSortProperty(
+            PropertyReferenceException propertyReferenceException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Campo de ordenação inválido: " + propertyReferenceException.getPropertyName(),
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorDTO> handleArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException argumentTypeMismatchException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Valor inválido para o parâmetro: " + argumentTypeMismatchException.getName(),
+                httpRequest,
+                List.of());
+    }
+
+    private ResponseEntity<ApiErrorDTO> buildErrorResponse(
+            HttpStatus status,
+            String message,
+            HttpServletRequest httpRequest,
+            List<FieldValidationErrorDTO> fieldErrors) {
+
+        ApiErrorDTO apiError = new ApiErrorDTO(
+                OffsetDateTime.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                httpRequest.getRequestURI(),
+                fieldErrors);
+
+        return ResponseEntity.status(status).body(apiError);
     }
 }
-
