@@ -8,6 +8,7 @@ import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -48,6 +49,17 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(
                 HttpStatus.FORBIDDEN,
                 roleNotAllowedException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorDTO> handleAccessDenied(
+            AccessDeniedException accessDeniedException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.FORBIDDEN,
+                "Acesso negado: permissão de administrador necessária para gerenciar motores.",
                 httpRequest,
                 List.of());
     }

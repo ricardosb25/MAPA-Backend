@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -62,9 +63,13 @@ public class MotorController {
     }
 
     @PostMapping
-    @Operation(summary = "Cadastrar motor", description = "Cria um novo motor no catálogo")
+    @Operation(
+            summary = "Cadastrar motor",
+            description = "Cria um novo motor no catálogo. Acesso restrito a administradores.")
     @ApiResponse(responseCode = "201", description = "Motor cadastrado com sucesso")
     @ApiResponse(responseCode = "400", description = "Dados do motor inválidos")
+    @ApiResponse(responseCode = "403", description = "Acesso negado: apenas administradores podem cadastrar motores")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MotorResponseDTO> create(@Valid @RequestBody MotorRequestDTO motorRequest) {
         MotorResponseDTO createdEngine = motorService.create(motorRequest);
 
@@ -77,10 +82,14 @@ public class MotorController {
     }
 
     @PutMapping("/{engineId}")
-    @Operation(summary = "Atualizar motor", description = "Atualiza todos os dados de um motor existente")
+    @Operation(
+            summary = "Atualizar motor",
+            description = "Atualiza todos os dados de um motor existente. Acesso restrito a administradores.")
     @ApiResponse(responseCode = "200", description = "Motor atualizado com sucesso")
     @ApiResponse(responseCode = "400", description = "Dados do motor inválidos")
+    @ApiResponse(responseCode = "403", description = "Acesso negado: apenas administradores podem editar motores")
     @ApiResponse(responseCode = "404", description = "Motor não encontrado")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MotorResponseDTO> update(
             @PathVariable Long engineId,
             @Valid @RequestBody MotorRequestDTO motorRequest) {
@@ -92,7 +101,9 @@ public class MotorController {
     @DeleteMapping("/{engineId}")
     @Operation(summary = "Excluir motor", description = "Remove um motor do catálogo pelo seu identificador")
     @ApiResponse(responseCode = "204", description = "Motor excluído com sucesso")
+    @ApiResponse(responseCode = "403", description = "Acesso negado: apenas administradores podem excluir motores")
     @ApiResponse(responseCode = "404", description = "Motor não encontrado")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long engineId) {
         motorService.delete(engineId);
         return ResponseEntity.noContent().build();
