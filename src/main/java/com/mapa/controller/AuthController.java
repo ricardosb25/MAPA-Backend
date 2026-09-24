@@ -1,8 +1,11 @@
 package com.mapa.controller;
 
 import com.mapa.dto.auth.AuthResponseDTO;
+import com.mapa.dto.auth.ForgotPasswordRequestDTO;
 import com.mapa.dto.auth.LoginRequestDTO;
+import com.mapa.dto.auth.MessageResponseDTO;
 import com.mapa.dto.auth.RegisterRequestDTO;
+import com.mapa.dto.auth.ResetPasswordRequestDTO;
 import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +46,25 @@ public class AuthController {
     @ApiResponse(responseCode = "401", description = "Credenciais inválidas")
     public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Solicitar redefinição de senha",
+            description = "Envia por e-mail um link de redefinição caso o endereço esteja cadastrado. "
+                    + "A resposta é sempre genérica para evitar enumeração de usuários.")
+    @ApiResponse(responseCode = "200", description = "Solicitação processada (mensagem genérica)")
+    @ApiResponse(responseCode = "400", description = "Dados inválidos")
+    public ResponseEntity<MessageResponseDTO> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request) {
+        return ResponseEntity.ok(authService.forgotPassword(request));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Redefinir senha",
+            description = "Troca a senha do usuário utilizando o token recebido por e-mail")
+    @ApiResponse(responseCode = "200", description = "Senha redefinida com sucesso")
+    @ApiResponse(responseCode = "400", description = "Token inválido/expirado ou dados inválidos")
+    public ResponseEntity<MessageResponseDTO> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
     }
 
     @GetMapping("/me")

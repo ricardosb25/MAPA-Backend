@@ -1,7 +1,9 @@
 package com.mapa.service;
 
 import com.mapa.domain.enums.Role;
+import com.mapa.dto.auth.ForgotPasswordRequestDTO;
 import com.mapa.dto.auth.RegisterRequestDTO;
+import com.mapa.dto.auth.ResetPasswordRequestDTO;
 import com.mapa.exception.RoleNotAllowedException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -20,7 +22,7 @@ class AuthServiceTest {
 
     @Test
     void shouldBlockAdminRegistration() {
-        AuthService authService = new AuthService(null, null, null, null);
+        AuthService authService = new AuthService(null, null, null, null, null, null);
         RegisterRequestDTO adminRequest = new RegisterRequestDTO(
                 "Administrador", "admin@email.com", "senha123456", Role.ADMIN);
 
@@ -45,6 +47,30 @@ class AuthServiceTest {
 
         assertTrue(validator.validate(studentRequest).isEmpty());
         assertTrue(validator.validate(teacherRequest).isEmpty());
+    }
+
+    @Test
+    void shouldValidateForgotPasswordRequestFields() {
+        Set<ConstraintViolation<ForgotPasswordRequestDTO>> blankEmailViolations =
+                validator.validate(new ForgotPasswordRequestDTO(""));
+        Set<ConstraintViolation<ForgotPasswordRequestDTO>> malformedEmailViolations =
+                validator.validate(new ForgotPasswordRequestDTO("email-invalido"));
+
+        assertFalse(blankEmailViolations.isEmpty());
+        assertFalse(malformedEmailViolations.isEmpty());
+        assertTrue(validator.validate(new ForgotPasswordRequestDTO("ana@email.com")).isEmpty());
+    }
+
+    @Test
+    void shouldValidateResetPasswordRequestFields() {
+        Set<ConstraintViolation<ResetPasswordRequestDTO>> missingTokenViolations =
+                validator.validate(new ResetPasswordRequestDTO("", "senha123456"));
+        Set<ConstraintViolation<ResetPasswordRequestDTO>> shortPasswordViolations =
+                validator.validate(new ResetPasswordRequestDTO("token-valido", "curta"));
+
+        assertFalse(missingTokenViolations.isEmpty());
+        assertFalse(shortPasswordViolations.isEmpty());
+        assertTrue(validator.validate(new ResetPasswordRequestDTO("token-valido", "senha123456")).isEmpty());
     }
 }
 

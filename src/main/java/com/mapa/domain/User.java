@@ -49,6 +49,12 @@ public class User {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "reset_token", unique = true, length = 128)
+    private String resetToken;
+
+    @Column(name = "reset_token_expires_at")
+    private OffsetDateTime resetTokenExpiresAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

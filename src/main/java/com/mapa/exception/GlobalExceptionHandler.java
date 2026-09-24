@@ -42,6 +42,17 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
+    @ExceptionHandler(InvalidResetTokenException.class)
+    public ResponseEntity<ApiErrorDTO> handleInvalidResetToken(
+            InvalidResetTokenException invalidResetTokenException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                invalidResetTokenException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
     @ExceptionHandler(RoleNotAllowedException.class)
     public ResponseEntity<ApiErrorDTO> handleRoleNotAllowed(
             RoleNotAllowedException roleNotAllowedException, HttpServletRequest httpRequest) {

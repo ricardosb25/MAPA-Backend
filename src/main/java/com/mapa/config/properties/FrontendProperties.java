@@ -6,11 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
 @Setter
-@ConfigurationProperties(prefix = "resend.api")
-public class ResendProperties {
+@ConfigurationProperties(prefix = "app.frontend")
+public class FrontendProperties {
 
-    private String key;
-
-    private String fromEmail;
+    private String baseUrl = "http://localhost:4200";
 
 }
