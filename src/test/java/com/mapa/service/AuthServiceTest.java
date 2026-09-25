@@ -4,12 +4,16 @@ import com.mapa.domain.enums.Role;
 import com.mapa.dto.auth.ForgotPasswordRequestDTO;
 import com.mapa.dto.auth.RegisterRequestDTO;
 import com.mapa.dto.auth.ResetPasswordRequestDTO;
+import com.mapa.exception.EmailDeliveryException;
 import com.mapa.exception.RoleNotAllowedException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -22,11 +26,22 @@ class AuthServiceTest {
 
     @Test
     void shouldBlockAdminRegistration() {
-        AuthService authService = new AuthService(null, null, null, null, null, null);
+        AuthService authService = new AuthService(null, null, null, null, null, null, null);
         RegisterRequestDTO adminRequest = new RegisterRequestDTO(
                 "Administrador", "admin@email.com", "senha123456", Role.ADMIN);
 
         assertThrows(RoleNotAllowedException.class, () -> authService.register(adminRequest));
+    }
+
+    @Test
+    void shouldFailFastWithoutTouchingRepositoriesWhenEmailServiceIsUnavailable() {
+        EmailDeliveryStatus emailDeliveryStatus = new EmailDeliveryStatus(
+                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
+        emailDeliveryStatus.markFailure();
+        AuthService authService = new AuthService(null, null, null, null, null, null, emailDeliveryStatus);
+
+        assertThrows(EmailDeliveryException.class,
+                () -> authService.forgotPassword(new ForgotPasswordRequestDTO("ana@email.com")));
     }
 
     @Test

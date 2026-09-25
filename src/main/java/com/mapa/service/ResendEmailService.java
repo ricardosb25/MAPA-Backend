@@ -1,6 +1,7 @@
 package com.mapa.service;
 
 import com.mapa.config.properties.ResendProperties;
+import com.mapa.exception.EmailDeliveryException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -20,8 +21,11 @@ public class ResendEmailService {
     private static final String RESEND_EMAILS_URL = "https://api.resend.com/emails";
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(20);
+    private static final int MAX_SEND_ATTEMPTS = 3;
+    private static final Duration RETRY_DELAY = Duration.ofSeconds(1);
 
     private final ResendProperties resendProperties;
+    private final EmailDeliveryStatus emailDeliveryStatus;
 
     public void sendPasswordResetEmail(String recipientEmail, String recipientName, String resetUrl) {
         String apiKey = resendProperties.getKey();
@@ -37,17 +41,43 @@ public class ResendEmailService {
                 "html", buildPasswordResetHtml(recipientName, resetUrl)
         );
 
+        Exception lastFailure = null;
+        for (int attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
+            try {
+                executeSendAttempt(apiKey, emailPayload);
+                log.info("E-mail de redefinição de senha enviado para {} (tentativa {}/{})",
+                        recipientEmail, attempt, MAX_SEND_ATTEMPTS);
+                return;
+            } catch (Exception sendException) {
+                lastFailure = sendException;
+                log.warn("Falha {}/{} ao enviar e-mail de redefinição para {}: {}",
+                        attempt, MAX_SEND_ATTEMPTS, recipientEmail, sendException.getMessage());
+                if (attempt < MAX_SEND_ATTEMPTS) {
+                    awaitBeforeRetry(attempt);
+                }
+            }
+        }
+
+        emailDeliveryStatus.markFailure();
+        throw new EmailDeliveryException(
+                "Falha ao enviar o e-mail de redefinição após " + MAX_SEND_ATTEMPTS + " tentativas", lastFailure);
+    }
+
+    void executeSendAttempt(String apiKey, Map<String, Object> emailPayload) {
+        buildClient().post()
+                .uri(RESEND_EMAILS_URL)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(emailPayload)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    void awaitBeforeRetry(int attempt) {
         try {
-            buildClient().post()
-                    .uri(RESEND_EMAILS_URL)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(emailPayload)
-                    .retrieve()
-                    .toBodilessEntity();
-            log.info("E-mail de redefinição de senha enviado para {}", recipientEmail);
-        } catch (Exception sendException) {
-            log.error("Falha ao enviar e-mail de redefinição para {}: {}", recipientEmail, sendException.getMessage());
+            Thread.sleep(RETRY_DELAY.multipliedBy(attempt).toMillis());
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
         }
     }
 

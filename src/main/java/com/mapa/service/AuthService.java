@@ -9,6 +9,7 @@ import com.mapa.dto.auth.MessageResponseDTO;
 import com.mapa.dto.auth.RegisterRequestDTO;
 import com.mapa.dto.auth.ResetPasswordRequestDTO;
 import com.mapa.dto.auth.UserResponseDTO;
+import com.mapa.exception.EmailDeliveryException;
 import com.mapa.exception.InvalidCredentialsException;
 import com.mapa.exception.EmailAlreadyExistsException;
 import com.mapa.exception.InvalidResetTokenException;
@@ -40,6 +41,8 @@ public class AuthService {
     private static final String FORGOT_PASSWORD_MESSAGE =
             "Se o e-mail informado estiver cadastrado, enviaremos um link de redefinição em instantes.";
     private static final String RESET_PASSWORD_MESSAGE = "Senha redefinida com sucesso.";
+    private static final String EMAIL_SERVICE_UNAVAILABLE_MESSAGE =
+            "Serviço de e-mail indisponível no momento. Tente novamente em instantes ou entre em contato com o suporte.";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -47,6 +50,7 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final ResendEmailService resendEmailService;
     private final FrontendProperties frontendProperties;
+    private final EmailDeliveryStatus emailDeliveryStatus;
 
     @Transactional
     public UserResponseDTO register(RegisterRequestDTO request) {
@@ -92,6 +96,10 @@ public class AuthService {
 
     @Transactional
     public MessageResponseDTO forgotPassword(ForgotPasswordRequestDTO request) {
+        if (emailDeliveryStatus.isUnavailable()) {
+            throw new EmailDeliveryException(EMAIL_SERVICE_UNAVAILABLE_MESSAGE);
+        }
+
         String normalizedEmail = request.email().trim().toLowerCase();
         userRepository.findByEmail(normalizedEmail)
                 .filter(User::isActive)

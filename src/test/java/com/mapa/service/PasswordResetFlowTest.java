@@ -44,10 +44,14 @@ class PasswordResetFlowTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private EmailDeliveryStatus emailDeliveryStatus;
+
     @AfterEach
     void cleanUpCreatedUsers() {
         userRepository.findByEmail(CANDIDATE_EMAIL).ifPresent(userRepository::delete);
         userRepository.findByEmail(EXPIRED_USER_EMAIL).ifPresent(userRepository::delete);
+        emailDeliveryStatus.clear();
     }
 
     @Test
@@ -93,6 +97,15 @@ class PasswordResetFlowTest {
         assertEquals(HttpStatus.BAD_REQUEST, postResetPassword(EXPIRED_TOKEN, "senhaNova12345"));
     }
 
+    @Test
+    void shouldReturnServiceUnavailableForBothKnownAndUnknownEmailsWhenEmailDeliveryIsFailing() {
+        createCandidateUser();
+        emailDeliveryStatus.markFailure();
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, forgotPasswordStatus("nao.cadastrado@email.com"));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, forgotPasswordStatus(CANDIDATE_EMAIL));
+    }
+
     private void createCandidateUser() {
         userRepository.save(User.builder()
                 .fullName("Ana Reset")
@@ -120,6 +133,17 @@ class PasswordResetFlowTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new ForgotPasswordRequestDTO(email))
                 .retrieve().toEntity(MessageResponseDTO.class);
+    }
+
+    private HttpStatusCode forgotPasswordStatus(String email) {
+        try {
+            return restClient().post().uri("/api/v1/auth/forgot-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new ForgotPasswordRequestDTO(email))
+                    .retrieve().toBodilessEntity().getStatusCode();
+        } catch (RestClientResponseException exception) {
+            return exception.getStatusCode();
+        }
     }
 
     private HttpStatusCode postResetPassword(String token, String password) {

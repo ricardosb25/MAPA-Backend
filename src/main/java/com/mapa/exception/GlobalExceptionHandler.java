@@ -64,6 +64,17 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ApiErrorDTO> handleEmailDeliveryFailure(
+            EmailDeliveryException emailDeliveryException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                emailDeliveryException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorDTO> handleAccessDenied(
             AccessDeniedException accessDeniedException, HttpServletRequest httpRequest) {
