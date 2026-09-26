@@ -11,4 +11,6 @@ public class ResendProperties {
 
     private String key;
 
+    private String fromEmail;
+
 }

@@ -6,11 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
 @Setter
-@ConfigurationProperties(prefix = "jwt")
-public class JwtProperties {
+@ConfigurationProperties(prefix = "app.frontend")
+public class FrontendProperties {
 
-    private String secret;
-
-    private long expirationMs = 86400000L;
+    private String baseUrl = "http://localhost:4200";
 
 }
