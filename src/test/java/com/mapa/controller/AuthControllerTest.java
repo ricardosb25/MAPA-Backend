@@ -34,7 +34,7 @@ class AuthControllerTest {
         try {
             return restClient().post().uri("/api/v1/auth/register")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new RegisterRequestDTO("Ana Silva", email, "password123", role))
+                    .body(new RegisterRequestDTO("Ana Silva", email, "password123", role, true))
                     .retrieve().toBodilessEntity().getStatusCode();
         } catch (RestClientResponseException exception) {
             return exception.getStatusCode();
@@ -68,7 +68,7 @@ class AuthControllerTest {
     void shouldRegisterAndLoginAndFetchCurrentUser() {
         ResponseEntity<UserResponseDTO> registerResponse = restClient().post().uri("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequestDTO("Ana Silva", "ana@email.com", "password123", Role.STUDENT))
+                .body(new RegisterRequestDTO("Ana Silva", "ana@email.com", "password123", Role.STUDENT, true))
                 .retrieve().toEntity(UserResponseDTO.class);
         assertEquals(HttpStatus.CREATED, registerResponse.getStatusCode());
         assertNotNull(registerResponse.getBody());
@@ -113,6 +113,14 @@ class AuthControllerTest {
     void shouldRejectInvalidRegistrationPayload() {
         assertEquals(HttpStatus.BAD_REQUEST, registerRawStatus(
                 "{\"fullName\":\"\",\"email\":\"invalid\",\"password\":\"short\",\"role\":null}"));
+    }
+
+    @Test
+    void shouldRejectRegistrationWithoutTermsAcceptance() {
+        assertEquals(HttpStatus.BAD_REQUEST, registerRawStatus(
+                "{\"fullName\":\"Ana Silva\",\"email\":\"sem-aceite@email.com\",\"password\":\"password123\",\"role\":\"STUDENT\"}"));
+        assertEquals(HttpStatus.BAD_REQUEST, registerRawStatus(
+                "{\"fullName\":\"Ana Silva\",\"email\":\"aceite-falso@email.com\",\"password\":\"password123\",\"role\":\"STUDENT\",\"acceptedTerms\":false}"));
     }
 }
 

@@ -32,7 +32,7 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "Cadastrar usuário", description = "Cria um novo usuário com perfil STUDENT ou TEACHER")
     @ApiResponse(responseCode = "201", description = "Usuário cadastrado com sucesso")
-    @ApiResponse(responseCode = "400", description = "Dados inválidos")
+    @ApiResponse(responseCode = "400", description = "Dados inválidos ou aceite dos Termos de Uso ausente")
     @ApiResponse(responseCode = "403", description = "Perfil não permitido para cadastro")
     @ApiResponse(responseCode = "409", description = "E-mail já cadastrado")
     public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterRequestDTO request) {

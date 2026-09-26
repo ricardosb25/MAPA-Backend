@@ -9,6 +9,7 @@ import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.exception.EmailAlreadyExistsException;
 import com.mapa.exception.InvalidCredentialsException;
 import com.mapa.exception.RoleNotAllowedException;
+import com.mapa.exception.TermsNotAcceptedException;
 import com.mapa.repository.UserRepository;
 import com.mapa.security.UserPrincipal;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,7 +48,7 @@ class AuthIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     private RegisterRequestDTO studentRequest(String email) {
-        return new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT);
+        return new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true);
     }
 
     private String uniqueEmail() {
@@ -104,9 +106,30 @@ class AuthIntegrationTest {
     @Test
     void shouldRejectAdminRegistration() {
         RegisterRequestDTO adminRequest =
-                new RegisterRequestDTO("Admin", uniqueEmail(), "password123", Role.ADMIN);
+                new RegisterRequestDTO("Admin", uniqueEmail(), "password123", Role.ADMIN, true);
 
         assertThrows(RoleNotAllowedException.class, () -> authService.register(adminRequest));
+    }
+
+    @Test
+    void shouldRejectRegistrationWithoutTermsAcceptance() {
+        String email = uniqueEmail();
+        RegisterRequestDTO requestWithoutTerms =
+                new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, false);
+
+        assertThrows(TermsNotAcceptedException.class, () -> authService.register(requestWithoutTerms));
+        assertFalse(userRepository.existsByEmail(email));
+    }
+
+    @Test
+    void shouldPersistTermsVersionAndAcceptanceTimestampOnRegistration() {
+        String email = uniqueEmail();
+
+        authService.register(studentRequest(email));
+
+        User registeredUser = userRepository.findByEmail(email).orElseThrow();
+        assertEquals("1.0", registeredUser.getTermsVersion());
+        assertNotNull(registeredUser.getTermsAcceptedAt());
     }
 
     @Test

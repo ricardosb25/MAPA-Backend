@@ -64,6 +64,17 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
+    @ExceptionHandler(TermsNotAcceptedException.class)
+    public ResponseEntity<ApiErrorDTO> handleTermsNotAccepted(
+            TermsNotAcceptedException termsNotAcceptedException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                termsNotAcceptedException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
     @ExceptionHandler(EmailDeliveryException.class)
     public ResponseEntity<ApiErrorDTO> handleEmailDeliveryFailure(
             EmailDeliveryException emailDeliveryException, HttpServletRequest httpRequest) {

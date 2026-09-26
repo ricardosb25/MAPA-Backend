@@ -101,7 +101,7 @@ class MotorControllerAuthorizationTest {
         String studentEmail = "student-" + UUID.randomUUID() + "@email.com";
         ResponseEntity<?> registerResponse = restClient().post().uri("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequestDTO("Aluno Teste", studentEmail, "password123", Role.STUDENT))
+                .body(new RegisterRequestDTO("Aluno Teste", studentEmail, "password123", Role.STUDENT, true))
                 .retrieve().toEntity(Object.class);
         assertEquals(HttpStatus.CREATED, registerResponse.getStatusCode());
 

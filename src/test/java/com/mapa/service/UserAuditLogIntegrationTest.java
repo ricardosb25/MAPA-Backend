@@ -11,6 +11,7 @@ import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.dto.user.UserAuditLogResponseDTO;
 import com.mapa.dto.user.UserCreateRequestDTO;
 import com.mapa.dto.user.UserUpdateRequestDTO;
+import com.mapa.exception.TermsNotAcceptedException;
 import com.mapa.repository.UserAuditLogRepository;
 import com.mapa.repository.UserRepository;
 import com.mapa.security.UserPrincipal;
@@ -34,6 +35,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -72,11 +74,35 @@ class UserAuditLogIntegrationTest {
         String email = uniqueEmail();
 
         UserResponseDTO registeredUser =
-                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT));
+                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true));
 
         assertTrue(hasLog(UserAuditAction.USER_CREATED, registeredUser.id()));
         assertTrue(logsFor(registeredUser.id()).stream()
                 .anyMatch(entry -> email.equals(entry.getTargetEmail())));
+    }
+
+    @Test
+    void shouldPersistTermsAcceptedLogOnSelfRegistration() {
+        String email = uniqueEmail();
+
+        UserResponseDTO registeredUser =
+                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true));
+
+        assertTrue(hasLog(UserAuditAction.TERMS_ACCEPTED, registeredUser.id()));
+        assertTrue(logsFor(registeredUser.id()).stream().anyMatch(entry ->
+                entry.getAction() == UserAuditAction.TERMS_ACCEPTED
+                        && entry.getDetails() != null
+                        && entry.getDetails().contains("versão 1.0")));
+    }
+
+    @Test
+    void shouldNotPersistTermsAcceptedLogWhenRegistrationIsRefused() {
+        String email = uniqueEmail();
+        RegisterRequestDTO requestWithoutTerms =
+                new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, false);
+
+        assertThrows(TermsNotAcceptedException.class, () -> authService.register(requestWithoutTerms));
+        assertFalse(userRepository.existsByEmail(email));
     }
 
     @Test
@@ -96,7 +122,7 @@ class UserAuditLogIntegrationTest {
     void shouldPersistUserUpdatedLogWithChangedFields() {
         String email = uniqueEmail();
         UserResponseDTO registeredUser =
-                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT));
+                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true));
         authenticateAs(userRepository.findById(registeredUser.id()).orElseThrow());
 
         userService.update(registeredUser.id(),
@@ -130,7 +156,7 @@ class UserAuditLogIntegrationTest {
     void shouldPersistAnonymizationLogWithOriginalEmail() {
         String email = uniqueEmail();
         UserResponseDTO registeredUser =
-                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT));
+                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true));
         authenticateAs(userRepository.findById(registeredUser.id()).orElseThrow());
 
         userService.anonymize(registeredUser.id());
@@ -144,7 +170,7 @@ class UserAuditLogIntegrationTest {
     void shouldFilterAuditLogsByActionAndTargetUser() {
         String email = uniqueEmail();
         UserResponseDTO registeredUser =
-                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT));
+                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true));
 
         PageResponseDTO<UserAuditLogResponseDTO> filteredPage = userAuditLogService.findAll(
                 UserAuditAction.USER_CREATED, registeredUser.id(), PageRequest.of(0, 10));
@@ -159,7 +185,7 @@ class UserAuditLogIntegrationTest {
 
     @Test
     void shouldReturnAuditLogsOrderedByMostRecentFirst() {
-        authService.register(new RegisterRequestDTO("Ana Silva", uniqueEmail(), "password123", Role.STUDENT));
+        authService.register(new RegisterRequestDTO("Ana Silva", uniqueEmail(), "password123", Role.STUDENT, true));
 
         PageResponseDTO<UserAuditLogResponseDTO> page =
                 userAuditLogService.findAll(null, null, PageRequest.of(0, 50));

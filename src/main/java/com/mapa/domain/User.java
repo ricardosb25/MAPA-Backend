@@ -55,6 +55,12 @@ public class User {
     @Column(name = "reset_token_expires_at")
     private OffsetDateTime resetTokenExpiresAt;
 
+    @Column(name = "terms_version", length = 20)
+    private String termsVersion;
+
+    @Column(name = "terms_accepted_at")
+    private OffsetDateTime termsAcceptedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

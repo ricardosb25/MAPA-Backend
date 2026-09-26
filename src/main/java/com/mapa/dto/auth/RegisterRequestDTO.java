@@ -22,6 +22,9 @@ public record RegisterRequestDTO(
         String password,
 
         @NotNull(message = "Perfil é obrigatório")
-        Role role
+        Role role,
+
+        @NotNull(message = "É necessário aceitar os Termos de Uso para se cadastrar")
+        Boolean acceptedTerms
 ) {
 }

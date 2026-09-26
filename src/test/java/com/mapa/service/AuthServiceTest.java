@@ -6,6 +6,7 @@ import com.mapa.dto.auth.RegisterRequestDTO;
 import com.mapa.dto.auth.ResetPasswordRequestDTO;
 import com.mapa.exception.EmailDeliveryException;
 import com.mapa.exception.RoleNotAllowedException;
+import com.mapa.exception.TermsNotAcceptedException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -28,7 +29,7 @@ class AuthServiceTest {
     void shouldBlockAdminRegistration() {
         AuthService authService = new AuthService(null, null, null, null, null, null, null, null);
         RegisterRequestDTO adminRequest = new RegisterRequestDTO(
-                "Administrador", "admin@email.com", "senha123456", Role.ADMIN);
+                "Administrador", "admin@email.com", "senha123456", Role.ADMIN, true);
 
         assertThrows(RoleNotAllowedException.class, () -> authService.register(adminRequest));
     }
@@ -46,7 +47,7 @@ class AuthServiceTest {
 
     @Test
     void shouldValidateRequiredRegistrationFields() {
-        RegisterRequestDTO invalidRequest = new RegisterRequestDTO("", "email-invalido", "curta", null);
+        RegisterRequestDTO invalidRequest = new RegisterRequestDTO("", "email-invalido", "curta", null, true);
 
         Set<ConstraintViolation<RegisterRequestDTO>> violations = validator.validate(invalidRequest);
 
@@ -54,11 +55,31 @@ class AuthServiceTest {
     }
 
     @Test
+    void shouldRequireTermsAcceptanceInBeanValidation() {
+        RegisterRequestDTO missingTerms = new RegisterRequestDTO(
+                "Ana Silva", "ana@email.com", "senha123456", Role.STUDENT, null);
+
+        Set<ConstraintViolation<RegisterRequestDTO>> violations = validator.validate(missingTerms);
+
+        assertTrue(violations.stream()
+                .anyMatch(violation -> "acceptedTerms".equals(violation.getPropertyPath().toString())));
+    }
+
+    @Test
+    void shouldRejectRegistrationWhenTermsAreNotAccepted() {
+        AuthService authService = new AuthService(null, null, null, null, null, null, null, null);
+        RegisterRequestDTO refusedTerms = new RegisterRequestDTO(
+                "Ana Silva", "ana@email.com", "senha123456", Role.STUDENT, false);
+
+        assertThrows(TermsNotAcceptedException.class, () -> authService.register(refusedTerms));
+    }
+
+    @Test
     void shouldAcceptValidStudentAndTeacherRegistration() {
         RegisterRequestDTO studentRequest =
-                new RegisterRequestDTO("Ana Silva", "ana@email.com", "senha123456", Role.STUDENT);
+                new RegisterRequestDTO("Ana Silva", "ana@email.com", "senha123456", Role.STUDENT, true);
         RegisterRequestDTO teacherRequest =
-                new RegisterRequestDTO("Carlos Souza", "carlos@email.com", "senha123456", Role.TEACHER);
+                new RegisterRequestDTO("Carlos Souza", "carlos@email.com", "senha123456", Role.TEACHER, true);
 
         assertTrue(validator.validate(studentRequest).isEmpty());
         assertTrue(validator.validate(teacherRequest).isEmpty());

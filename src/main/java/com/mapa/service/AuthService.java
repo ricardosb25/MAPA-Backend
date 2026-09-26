@@ -16,6 +16,7 @@ import com.mapa.exception.EmailAlreadyExistsException;
 import com.mapa.exception.InvalidResetTokenException;
 import com.mapa.exception.RoleNotAllowedException;
 import com.mapa.exception.ResourceNotFoundException;
+import com.mapa.exception.TermsNotAcceptedException;
 import com.mapa.config.properties.FrontendProperties;
 import com.mapa.config.properties.JwtProperties;
 import com.mapa.repository.UserRepository;
@@ -44,6 +45,7 @@ public class AuthService {
     private static final String RESET_PASSWORD_MESSAGE = "Senha redefinida com sucesso.";
     private static final String EMAIL_SERVICE_UNAVAILABLE_MESSAGE =
             "Serviço de e-mail indisponível no momento. Tente novamente em instantes ou entre em contato com o suporte.";
+    private static final String TERMS_VERSION = "1.0";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -59,16 +61,22 @@ public class AuthService {
         if (request.role() == Role.ADMIN) {
             throw new RoleNotAllowedException("Cadastro com perfil ADMIN não é permitido");
         }
+        if (!Boolean.TRUE.equals(request.acceptedTerms())) {
+            throw new TermsNotAcceptedException();
+        }
         String normalizedEmail = request.email().trim().toLowerCase();
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new EmailAlreadyExistsException(normalizedEmail);
         }
+        OffsetDateTime acceptedAt = OffsetDateTime.now();
         User newUser = User.builder()
                 .fullName(request.fullName().trim())
                 .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(request.role())
                 .active(true)
+                .termsVersion(TERMS_VERSION)
+                .termsAcceptedAt(acceptedAt)
                 .build();
         User savedUser = userRepository.save(newUser);
         userAuditLogService.record(UserAuditAction.USER_CREATED,
@@ -77,6 +85,13 @@ public class AuthService {
                 savedUser.getId(),
                 savedUser.getEmail(),
                 "Auto-cadastro realizado pelo próprio usuário");
+        userAuditLogService.record(UserAuditAction.TERMS_ACCEPTED,
+                savedUser.getId(),
+                savedUser.getEmail(),
+                savedUser.getId(),
+                savedUser.getEmail(),
+                "Termos de Uso (versão " + TERMS_VERSION + ") aceitos pelo titular no cadastro em "
+                        + acceptedAt);
         return UserResponseDTO.fromEntity(savedUser);
     }
 

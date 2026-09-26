@@ -127,7 +127,7 @@ class UserControllerAuthorizationTest {
     private UserResponseDTO registerStudent() {
         ResponseEntity<UserResponseDTO> response = restClient().post().uri("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequestDTO("Aluno Teste", uniqueEmail(), STANDARD_PASSWORD, Role.STUDENT))
+                .body(new RegisterRequestDTO("Aluno Teste", uniqueEmail(), STANDARD_PASSWORD, Role.STUDENT, true))
                 .retrieve().toEntity(UserResponseDTO.class);
         assertNotNull(response.getBody());
         return response.getBody();
