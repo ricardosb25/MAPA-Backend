@@ -26,7 +26,7 @@ class AuthServiceTest {
 
     @Test
     void shouldBlockAdminRegistration() {
-        AuthService authService = new AuthService(null, null, null, null, null, null, null);
+        AuthService authService = new AuthService(null, null, null, null, null, null, null, null);
         RegisterRequestDTO adminRequest = new RegisterRequestDTO(
                 "Administrador", "admin@email.com", "senha123456", Role.ADMIN);
 
@@ -38,7 +38,7 @@ class AuthServiceTest {
         EmailDeliveryStatus emailDeliveryStatus = new EmailDeliveryStatus(
                 Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
         emailDeliveryStatus.markFailure();
-        AuthService authService = new AuthService(null, null, null, null, null, null, emailDeliveryStatus);
+        AuthService authService = new AuthService(null, null, null, null, null, null, emailDeliveryStatus, null);
 
         assertThrows(EmailDeliveryException.class,
                 () -> authService.forgotPassword(new ForgotPasswordRequestDTO("ana@email.com")));

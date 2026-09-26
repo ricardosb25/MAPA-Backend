@@ -81,7 +81,7 @@ public class GlobalExceptionHandler {
 
         return buildErrorResponse(
                 HttpStatus.FORBIDDEN,
-                "Acesso negado: permissão de administrador necessária para gerenciar motores.",
+                "Acesso negado: você não tem permissão para executar esta ação.",
                 httpRequest,
                 List.of());
     }

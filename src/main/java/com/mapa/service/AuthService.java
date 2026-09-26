@@ -2,6 +2,7 @@ package com.mapa.service;
 
 import com.mapa.domain.User;
 import com.mapa.domain.enums.Role;
+import com.mapa.domain.enums.UserAuditAction;
 import com.mapa.dto.auth.AuthResponseDTO;
 import com.mapa.dto.auth.ForgotPasswordRequestDTO;
 import com.mapa.dto.auth.LoginRequestDTO;
@@ -51,6 +52,7 @@ public class AuthService {
     private final ResendEmailService resendEmailService;
     private final FrontendProperties frontendProperties;
     private final EmailDeliveryStatus emailDeliveryStatus;
+    private final UserAuditLogService userAuditLogService;
 
     @Transactional
     public UserResponseDTO register(RegisterRequestDTO request) {
@@ -68,7 +70,14 @@ public class AuthService {
                 .role(request.role())
                 .active(true)
                 .build();
-        return UserResponseDTO.fromEntity(userRepository.save(newUser));
+        User savedUser = userRepository.save(newUser);
+        userAuditLogService.record(UserAuditAction.USER_CREATED,
+                savedUser.getId(),
+                savedUser.getEmail(),
+                savedUser.getId(),
+                savedUser.getEmail(),
+                "Auto-cadastro realizado pelo próprio usuário");
+        return UserResponseDTO.fromEntity(savedUser);
     }
 
     @Transactional(readOnly = true)
@@ -118,6 +127,12 @@ public class AuthService {
         user.setResetToken(null);
         user.setResetTokenExpiresAt(null);
         userRepository.save(user);
+        userAuditLogService.record(UserAuditAction.PASSWORD_RESET,
+                user.getId(),
+                user.getEmail(),
+                user.getId(),
+                user.getEmail(),
+                "Senha redefinida pelo próprio usuário via token de recuperação");
         return MessageResponseDTO.of(RESET_PASSWORD_MESSAGE);
     }
 
