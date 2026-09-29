@@ -13,8 +13,11 @@ import com.mapa.exception.ResourceNotFoundException;
 import com.mapa.exception.RoleNotAllowedException;
 import com.mapa.repository.UserRepository;
 import com.mapa.security.UserPrincipal;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,7 +44,13 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public PageResponseDTO<UserResponseDTO> findAll(Pageable pageable) {
-        return PageResponseDTO.fromPage(userRepository.findAll(pageable).map(UserResponseDTO::fromEntity));
+        return findAll(null, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponseDTO<UserResponseDTO> findAll(String search, Role role, Pageable pageable) {
+        Page<User> usersPage = userRepository.findAll(buildFilters(search, role), pageable);
+        return PageResponseDTO.fromPage(usersPage.map(UserResponseDTO::fromEntity));
     }
 
     @Transactional(readOnly = true)
@@ -106,6 +115,11 @@ public class UserService {
 
         if (request.active() != null && request.active() != user.isActive()) {
             requireAdmin(principal, "situação ativa");
+            if (!request.active() && user.getRole() == Role.ADMIN
+                    && userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, user.getId()) == 0) {
+                throw new RoleNotAllowedException(
+                        "Operação não permitida: é necessário manter ao menos um administrador ativo");
+            }
             changes.add("active: '" + user.isActive() + "' -> '" + request.active() + "'");
             user.setActive(request.active());
         }
@@ -158,6 +172,26 @@ public class UserService {
     private User findEntityById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com id: " + userId));
+    }
+
+    private Specification<User> buildFilters(String search, Role role) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (role != null) {
+                predicates.add(criteriaBuilder.equal(root.get("role"), role));
+            }
+
+            String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+            if (!normalizedSearch.isEmpty()) {
+                String pattern = "%" + normalizedSearch + "%";
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), pattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), pattern)));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     private UserPrincipal requireAdminOrSelf(User target) {

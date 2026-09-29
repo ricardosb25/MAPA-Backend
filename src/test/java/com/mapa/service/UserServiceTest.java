@@ -3,6 +3,7 @@ package com.mapa.service;
 import com.mapa.domain.User;
 import com.mapa.domain.enums.Role;
 import com.mapa.domain.enums.UserAuditAction;
+import com.mapa.dto.PageResponseDTO;
 import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.dto.user.UserCreateRequestDTO;
 import com.mapa.dto.user.UserUpdateRequestDTO;
@@ -15,6 +16,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -186,6 +192,63 @@ class UserServiceTest {
         assertNull(student.getResetTokenExpiresAt());
         verify(userAuditLogService).recordByCurrentUser(
                 eq(UserAuditAction.USER_ANONYMIZED), eq(5L), eq("ana@email.com"), contains("ana@email.com"));
+    }
+
+    @Test
+    void shouldFilterUsersBySearchAndRoleThroughSpecification() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> filteredPage = new PageImpl<>(
+                List.of(user(5L, "Ana Lima", "ana@aluno.mapa.edu", Role.STUDENT)), pageable, 1);
+        when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(filteredPage);
+
+        PageResponseDTO<UserResponseDTO> result = userService.findAll("  ana@aluno ", Role.STUDENT, pageable);
+
+        assertEquals(1, result.totalElements());
+        assertEquals("ana@aluno.mapa.edu", result.content().get(0).email());
+        verify(userRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    void shouldListUsersWithoutFiltersKeepingDefaultBehavior() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> usersPage = new PageImpl<>(
+                List.of(user(1L, "Ana Lima", "ana@aluno.mapa.edu", Role.STUDENT)), pageable, 1);
+        when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(usersPage);
+
+        PageResponseDTO<UserResponseDTO> result = userService.findAll(pageable);
+
+        assertEquals(1, result.totalElements());
+    }
+
+    @Test
+    void shouldBlockDeactivatingLastActiveAdmin() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, 9L)).thenReturn(0L);
+
+        assertThrows(RoleNotAllowedException.class, () -> userService.update(9L,
+                new UserUpdateRequestDTO("Administrador", "admin@x.com", null, false)));
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(userAuditLogService, never()).recordByCurrentUser(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldAllowAdminToDeactivateAStudentAccount() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        User student = user(5L, "Ana Lima", "ana@aluno.mapa.edu", Role.STUDENT);
+        authenticateAs(admin);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(student));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponseDTO updatedUser = userService.update(5L,
+                new UserUpdateRequestDTO("Ana Lima", "ana@aluno.mapa.edu", null, false));
+
+        assertFalse(updatedUser.active());
+        assertFalse(student.isActive());
+        verify(userAuditLogService).recordByCurrentUser(
+                eq(UserAuditAction.USER_UPDATED), eq(5L), eq("ana@aluno.mapa.edu"), contains("active"));
     }
 
     private User user(Long id, String fullName, String email, Role role) {

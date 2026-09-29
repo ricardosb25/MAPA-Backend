@@ -1,5 +1,6 @@
 package com.mapa.controller;
 
+import com.mapa.domain.enums.Role;
 import com.mapa.domain.enums.UserAuditAction;
 import com.mapa.domain.enums.UserAuditLogLevel;
 import com.mapa.dto.PageResponseDTO;
@@ -48,16 +49,20 @@ public class UserController {
     @Operation(
             summary = "Listar usuários com paginação",
             description = "Retorna os usuários cadastrados de forma paginada. Acesso restrito a administradores. "
-                    + "Parâmetros: page (índice da página, iniciando em 0), "
+                    + "Parâmetros: search (busca case-insensitive por nome ou e-mail), "
+                    + "role (perfil: ADMIN, TEACHER ou STUDENT), "
+                    + "page (índice da página, iniciando em 0), "
                     + "size (itens por página, máximo 100) e sort (ex.: id,asc | email,desc).")
     @ApiResponse(responseCode = "200", description = "Página de usuários obtida com sucesso")
     @ApiResponse(responseCode = "401", description = "Token ausente ou inválido")
     @ApiResponse(responseCode = "403", description = "Acesso negado: apenas administradores podem listar usuários")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PageResponseDTO<UserResponseDTO>> findAll(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Role role,
             @ParameterObject @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        return ResponseEntity.ok(userService.findAll(pageable));
+        return ResponseEntity.ok(userService.findAll(search, role, pageable));
     }
 
     @PostMapping
