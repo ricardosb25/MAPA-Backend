@@ -1,6 +1,7 @@
 package com.mapa.controller;
 
 import com.mapa.domain.enums.UserAuditAction;
+import com.mapa.domain.enums.UserAuditLogLevel;
 import com.mapa.dto.PageResponseDTO;
 import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.dto.user.UserAuditLogResponseDTO;
@@ -68,15 +69,14 @@ public class UserController {
     @ApiResponse(responseCode = "403", description = "Acesso negado: apenas administradores podem criar usuários")
     @ApiResponse(responseCode = "409", description = "E-mail já cadastrado")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserCreateRequestDTO request) {
+    public ResponseEntity<UserResponseDTO>
+    create(@Valid @RequestBody UserCreateRequestDTO request) {
         UserResponseDTO createdUser = userService.create(request);
-
-        URI resourceLocation = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{userId}")
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
                 .buildAndExpand(createdUser.id())
                 .toUri();
-
-        return ResponseEntity.created(resourceLocation).body(createdUser);
+        return ResponseEntity.created(location).body(createdUser);
     }
 
     @GetMapping("/audit-logs")
@@ -84,6 +84,8 @@ public class UserController {
             summary = "Listar logs de auditoria de usuários",
             description = "Retorna o histórico de criações, edições, anonimizações e redefinições de senha, "
                     + "de forma paginada e ordenada do mais recente para o mais antigo. "
+                    + "Filtros opcionais: action (ação exata), targetUserId (usuário alvo), "
+                    + "level (nível INFO, AVISO ou ERRO) e search (busca por e-mail, detalhe, rótulo ou ação). "
                     + "Acesso restrito a administradores.")
     @ApiResponse(responseCode = "200", description = "Página de logs obtida com sucesso")
     @ApiResponse(responseCode = "401", description = "Token ausente ou inválido")
@@ -92,10 +94,12 @@ public class UserController {
     public ResponseEntity<PageResponseDTO<UserAuditLogResponseDTO>> findAuditLogs(
             @RequestParam(required = false) UserAuditAction action,
             @RequestParam(required = false) Long targetUserId,
+            @RequestParam(required = false) UserAuditLogLevel level,
+            @RequestParam(required = false) String search,
             @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
-        return ResponseEntity.ok(userAuditLogService.findAll(action, targetUserId, pageable));
+        return ResponseEntity.ok(userAuditLogService.findAll(action, targetUserId, level, search, pageable));
     }
 
     @GetMapping("/{userId}")

@@ -2,6 +2,7 @@ package com.mapa.dto.user;
 
 import com.mapa.domain.UserAuditLog;
 import com.mapa.domain.enums.UserAuditAction;
+import com.mapa.domain.enums.UserAuditLogLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
@@ -14,6 +15,12 @@ public record UserAuditLogResponseDTO(
 
         @Schema(description = "Ação auditada", example = "USER_UPDATED")
         UserAuditAction action,
+
+        @Schema(description = "Rótulo legível da ação auditada", example = "Usuário editado")
+        String actionLabel,
+
+        @Schema(description = "Nível de severidade derivado da ação", example = "INFO")
+        UserAuditLogLevel level,
 
         @Schema(description = "Identificador do usuário que executou a ação (nulo em ações anônimas)", example = "1")
         Long actorId,
@@ -37,6 +44,8 @@ public record UserAuditLogResponseDTO(
         return new UserAuditLogResponseDTO(
                 userAuditLog.getId(),
                 userAuditLog.getAction(),
+                userAuditLog.getAction().getLabel(),
+                userAuditLog.getAction().getLevel(),
                 userAuditLog.getActorId(),
                 userAuditLog.getActorEmail(),
                 userAuditLog.getTargetUserId(),

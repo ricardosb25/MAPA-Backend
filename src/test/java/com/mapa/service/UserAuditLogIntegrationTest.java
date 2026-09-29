@@ -4,6 +4,7 @@ import com.mapa.domain.User;
 import com.mapa.domain.UserAuditLog;
 import com.mapa.domain.enums.Role;
 import com.mapa.domain.enums.UserAuditAction;
+import com.mapa.domain.enums.UserAuditLogLevel;
 import com.mapa.dto.PageResponseDTO;
 import com.mapa.dto.auth.RegisterRequestDTO;
 import com.mapa.dto.auth.ResetPasswordRequestDTO;
@@ -195,6 +196,58 @@ class UserAuditLogIntegrationTest {
             assertFalse(page.content().get(index - 1).createdAt().isBefore(page.content().get(index).createdAt()),
                     "Registros de auditoria devem estar ordenados do mais recente para o mais antigo");
         }
+    }
+
+    @Test
+    void shouldFilterAuditLogsByLevel() {
+        String email = uniqueEmail();
+        UserResponseDTO registeredUser =
+                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true));
+        authenticateAs(userRepository.findById(registeredUser.id()).orElseThrow());
+        userService.anonymize(registeredUser.id());
+
+        PageResponseDTO<UserAuditLogResponseDTO> warningPage = userAuditLogService.findAll(
+                null, registeredUser.id(), UserAuditLogLevel.AVISO, null, PageRequest.of(0, 50));
+
+        assertFalse(warningPage.content().isEmpty());
+        warningPage.content().forEach(entry -> {
+            assertEquals(UserAuditLogLevel.AVISO, entry.level());
+            assertEquals(UserAuditAction.USER_ANONYMIZED, entry.action());
+        });
+
+        PageResponseDTO<UserAuditLogResponseDTO> infoPage = userAuditLogService.findAll(
+                null, registeredUser.id(), UserAuditLogLevel.INFO, null, PageRequest.of(0, 50));
+
+        assertFalse(infoPage.content().isEmpty());
+        infoPage.content().forEach(entry -> {
+            assertEquals(UserAuditLogLevel.INFO, entry.level());
+            assertTrue(entry.action() != UserAuditAction.USER_ANONYMIZED,
+                    "O nível INFO não deve conter anonimizações");
+        });
+    }
+
+    @Test
+    void shouldSearchAuditLogsByEmailAndActionLabel() {
+        String email = uniqueEmail();
+        UserResponseDTO registeredUser =
+                authService.register(new RegisterRequestDTO("Ana Silva", email, "password123", Role.STUDENT, true));
+
+        PageResponseDTO<UserAuditLogResponseDTO> byEmail = userAuditLogService.findAll(
+                null, null, null, email, PageRequest.of(0, 50));
+
+        assertFalse(byEmail.content().isEmpty());
+        byEmail.content().forEach(entry -> assertEquals(registeredUser.id(), entry.targetUserId()));
+
+        PageResponseDTO<UserAuditLogResponseDTO> byActionLabel = userAuditLogService.findAll(
+                null, null, null, "usuário criado", PageRequest.of(0, 50));
+
+        assertFalse(byActionLabel.content().isEmpty());
+        byActionLabel.content().forEach(entry -> assertEquals(UserAuditAction.USER_CREATED, entry.action()));
+
+        PageResponseDTO<UserAuditLogResponseDTO> noMatches = userAuditLogService.findAll(
+                null, null, null, "termo-inexistente-" + UUID.randomUUID(), PageRequest.of(0, 50));
+
+        assertTrue(noMatches.content().isEmpty());
     }
 
     private boolean hasLog(UserAuditAction action, Long targetUserId) {
