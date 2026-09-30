@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
+                   id="Definitions_MAPA" 
+                   targetNamespace="http://mapa.com/bpmn" 
+                   exporter="Camunda Modeler" 
+                   exporterVersion="5.0.0">
+
+  <!-- ==================== PROCESSO DE AUTENTICAÇÃO ====================  -->
+  <bpmn:process id="Process_Authentication" name="Autenticação de Usuário" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_Register" name="Solicitação de Cadastro">
+      <bpmn:outgoing>Flow_Register1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:task id="Task_ValidateInput" name="Validar Dados de Entrada">
+      <bpmn:incoming>Flow_Register1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_ValidInput" name="Dados Válidos?">
+      <bpmn:incoming>Flow_Register2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RegisterFail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_CheckEmail" name="Verificar E-mail Existente">
+      <bpmn:incoming>Flow_Register3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register4</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_EmailExists" name="E-mail Já Cadastrado?">
+      <bpmn:incoming>Flow_Register4</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_EmailExists</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_CheckRole" name="Validar Perfil de Usuário">
+      <bpmn:incoming>Flow_Register5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_RoleAllowed" name="Perfil Permitido?">
+      <bpmn:incoming>Flow_Register6</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RoleNotAllowed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_CheckTerms" name="Verificar Aceite dos Termos">
+      <bpmn:incoming>Flow_Register7</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register8</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_TermsAccepted" name="Termos Aceitos?">
+      <bpmn:incoming>Flow_Register8</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_TermsNotAccepted</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_EncodePassword" name="Codificar Senha">
+      <bpmn:incoming>Flow_Register9</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register10</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_CreateUser" name="Criar Usuário no Banco">
+      <bpmn:incoming>Flow_Register10</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register11</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_LogAudit" name="Registrar Ação de Auditoria">
+      <bpmn:incoming>Flow_Register11</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register12</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="EndEvent_RegisterSuccess" name="Cadastro Realizado com Sucesso">
+      <bpmn:incoming>Flow_Register12</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_RegisterFail" name="Cadastro Falhou">
+      <bpmn:incoming>Flow_RegisterFail</bpmn:incoming>
+      <bpmn:incoming>Flow_EmailExists</bpmn:incoming>
+      <bpmn:incoming>Flow_RoleNotAllowed</bpmn:incoming>
+      <bpmn:incoming>Flow_TermsNotAccepted</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Register1" sourceRef="StartEvent_Register" targetRef="Task_ValidateInput"/>
+    <bpmn:sequenceFlow id="Flow_Register2" sourceRef="Task_ValidateInput" targetRef="Gateway_ValidInput"/>
+    <bpmn:sequenceFlow id="Flow_Register3" name="Sim" sourceRef="Gateway_ValidInput" targetRef="Task_CheckEmail"/>
+    <bpmn:sequenceFlow id="Flow_RegisterFail" name="Não" sourceRef="Gateway_ValidInput" targetRef="EndEvent_RegisterFail"/>
+    <bpmn:sequenceFlow id="Flow_Register4" sourceRef="Task_CheckEmail" targetRef="Gateway_EmailExists"/>
+    <bpmn:sequenceFlow id="Flow_Register5" name="Não" sourceRef="Gateway_EmailExists" targetRef="Task_CheckRole"/>
+    <bpmn:sequenceFlow id="Flow_EmailExists" name="Sim" sourceRef="Gateway_EmailExists" targetRef="EndEvent_RegisterFail"/>
+    <bpmn:sequenceFlow id="Flow_Register6" sourceRef="Task_CheckRole" targetRef="Gateway_RoleAllowed"/>
+    <bpmn:sequenceFlow id="Flow_Register7" name="Sim" sourceRef="Gateway_RoleAllowed" targetRef="Task_CheckTerms"/>
+    <bpmn:sequenceFlow id="Flow_RoleNotAllowed" name="Não" sourceRef="Gateway_RoleAllowed" targetRef="EndEvent_RegisterFail"/>
+    <bpmn:sequenceFlow id="Flow_Register8" sourceRef="Task_CheckTerms" targetRef="Gateway_TermsAccepted"/>
+    <bpmn:sequenceFlow id="Flow_Register9" name="Sim" sourceRef="Gateway_TermsAccepted" targetRef="Task_EncodePassword"/>
+    <bpmn:sequenceFlow id="Flow_TermsNotAccepted" name="Não" sourceRef="Gateway_TermsAccepted" targetRef="EndEvent_RegisterFail"/>
+    <bpmn:sequenceFlow id="Flow_Register10" sourceRef="Task_EncodePassword" targetRef="Task_CreateUser"/>
+    <bpmn:sequenceFlow id="Flow_Register11" sourceRef="Task_CreateUser" targetRef="Task_LogAudit"/>
+    <bpmn:sequenceFlow id="Flow_Register12" sourceRef="Task_LogAudit" targetRef="EndEvent_RegisterSuccess"/>
+  </bpmn:process>
+
+  <!-- ==================== PROCESSO DE LOGIN ====================  -->
+  <bpmn:process id="Process_Login" name="Login de Usuário" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_Login" name="Solicitação de Login">
+      <bpmn:outgoing>Flow_Login1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_ValidateLoginInput" name="Validar E-mail e Senha">
+      <bpmn:incoming>Flow_Login1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_LoginInputValid" name="Entrada Válida?">
+      <bpmn:incoming>Flow_Login2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_LoginFail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_FindUser" name="Buscar Usuário por E-mail">
+      <bpmn:incoming>Flow_Login3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login4</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_UserFound" name="Usuário Encontrado?">
+      <bpmn:incoming>Flow_Login4</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_UserNotFound</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_CheckUserActive" name="Verificar se Usuário está Ativo">
+      <bpmn:incoming>Flow_Login5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_UserActive" name="Usuário Ativo?">
+      <bpmn:incoming>Flow_Login6</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_UserInactive</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_VerifyPassword" name="Verificar Senha">
+      <bpmn:incoming>Flow_Login7</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login8</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_PasswordValid" name="Senha Válida?">
+      <bpmn:incoming>Flow_Login8</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_InvalidPassword</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_GenerateJWT" name="Gerar Token JWT">
+      <bpmn:incoming>Flow_Login9</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login10</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="EndEvent_LoginSuccess" name="Login Realizado com Sucesso">
+      <bpmn:incoming>Flow_Login10</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_LoginFail" name="Login Falhou">
+      <bpmn:incoming>Flow_LoginFail</bpmn:incoming>
+      <bpmn:incoming>Flow_UserNotFound</bpmn:incoming>
+      <bpmn:incoming>Flow_UserInactive</bpmn:incoming>
+      <bpmn:incoming>Flow_InvalidPassword</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Login1" sourceRef="StartEvent_Login" targetRef="Task_ValidateLoginInput"/>
+    <bpmn:sequenceFlow id="Flow_Login2" sourceRef="Task_ValidateLoginInput" targetRef="Gateway_LoginInputValid"/>
+    <bpmn:sequenceFlow id="Flow_Login3" name="Sim" sourceRef="Gateway_LoginInputValid" targetRef="Task_FindUser"/>
+    <bpmn:sequenceFlow id="Flow_LoginFail" name="Não" sourceRef="Gateway_LoginInputValid" targetRef="EndEvent_LoginFail"/>
+    <bpmn:sequenceFlow id="Flow_Login4" sourceRef="Task_FindUser" targetRef="Gateway_UserFound"/>
+    <bpmn:sequenceFlow id="Flow_Login5" name="Sim" sourceRef="Gateway_UserFound" targetRef="Task_CheckUserActive"/>
+    <bpmn:sequenceFlow id="Flow_UserNotFound" name="Não" sourceRef="Gateway_UserFound" targetRef="EndEvent_LoginFail"/>
+    <bpmn:sequenceFlow id="Flow_Login6" sourceRef="Task_CheckUserActive" targetRef="Gateway_UserActive"/>
+    <bpmn:sequenceFlow id="Flow_Login7" name="Sim" sourceRef="Gateway_UserActive" targetRef="Task_VerifyPassword"/>
+    <bpmn:sequenceFlow id="Flow_UserInactive" name="Não" sourceRef="Gateway_UserActive" targetRef="EndEvent_LoginFail"/>
+    <bpmn:sequenceFlow id="Flow_Login8" sourceRef="Task_VerifyPassword" targetRef="Gateway_PasswordValid"/>
+    <bpmn:sequenceFlow id="Flow_Login9" name="Sim" sourceRef="Gateway_PasswordValid" targetRef="Task_GenerateJWT"/>
+    <bpmn:sequenceFlow id="Flow_InvalidPassword" name="Não" sourceRef="Gateway_PasswordValid" targetRef="EndEvent_LoginFail"/>
+    <bpmn:sequenceFlow id="Flow_Login10" sourceRef="Task_GenerateJWT" targetRef="EndEvent_LoginSuccess"/>
+  </bpmn:process>
+
+  <!-- ==================== PROCESSO DE RECUPERAÇÃO DE SENHA ====================  -->
+  <bpmn:process id="Process_ForgotPassword" name="Recuperação de Senha" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_ForgotPassword" name="Solicitação de Recuperação">
+      <bpmn:outgoing>Flow_FP1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_ValidateFPEmail" name="Validar E-mail">
+      <bpmn:incoming>Flow_FP1</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_FPEmailValid" name="E-mail Válido?">
+      <bpmn:incoming>Flow_FP2</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_FPFail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_SearchUserByEmail" name="Buscar Usuário por E-mail">
+      <bpmn:incoming>Flow_FP3</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP4</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_FPUserFound" name="Usuário Encontrado?">
+      <bpmn:incoming>Flow_FP4</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_FPNoUser</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_GenerateResetToken" name="Gerar Token de Redefinição">
+      <bpmn:incoming>Flow_FP5</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_BuildResetURL" name="Construir URL de Redefinição">
+      <bpmn:incoming>Flow_FP6</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP7</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_SendResetEmail" name="Enviar E-mail com Link">
+      <bpmn:incoming>Flow_FP7</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP8</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_EmailSent" name="E-mail Enviado?">
+      <bpmn:incoming>Flow_FP8</bpmn:incoming>
+      <bpmn:outgoing>Flow_FP9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_EmailFailed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_FPSuccess" name="Solicitação Processada com Sucesso">
+      <bpmn:incoming>Flow_FP9</bpmn:incoming>
+      <bpmn:incoming>Flow_FPNoUser</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_FPFail" name="Recuperação Falhou">
+      <bpmn:incoming>Flow_FPFail</bpmn:incoming>
+      <bpmn:incoming>Flow_EmailFailed</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_FP1" sourceRef="StartEvent_ForgotPassword" targetRef="Task_ValidateFPEmail"/>
+    <bpmn:sequenceFlow id="Flow_FP2" sourceRef="Task_ValidateFPEmail" targetRef="Gateway_FPEmailValid"/>
+    <bpmn:sequenceFlow id="Flow_FP3" name="Sim" sourceRef="Gateway_FPEmailValid" targetRef="Task_SearchUserByEmail"/>
+    <bpmn:sequenceFlow id="Flow_FPFail" name="Não" sourceRef="Gateway_FPEmailValid" targetRef="EndEvent_FPFail"/>
+    <bpmn:sequenceFlow id="Flow_FP4" sourceRef="Task_SearchUserByEmail" targetRef="Gateway_FPUserFound"/>
+    <bpmn:sequenceFlow id="Flow_FP5" name="Sim" sourceRef="Gateway_FPUserFound" targetRef="Task_GenerateResetToken"/>
+    <bpmn:sequenceFlow id="Flow_FPNoUser" name="Não" sourceRef="Gateway_FPUserFound" targetRef="EndEvent_FPSuccess"/>
+    <bpmn:sequenceFlow id="Flow_FP6" sourceRef="Task_GenerateResetToken" targetRef="Task_BuildResetURL"/>
+    <bpmn:sequenceFlow id="Flow_FP7" sourceRef="Task_BuildResetURL" targetRef="Task_SendResetEmail"/>
+    <bpmn:sequenceFlow id="Flow_FP8" sourceRef="Task_SendResetEmail" targetRef="Gateway_EmailSent"/>
+    <bpmn:sequenceFlow id="Flow_FP9" name="Sim" sourceRef="Gateway_EmailSent" targetRef="EndEvent_FPSuccess"/>
+    <bpmn:sequenceFlow id="Flow_EmailFailed" name="Não" sourceRef="Gateway_EmailSent" targetRef="EndEvent_FPFail"/>
+  </bpmn:process>
+
+  <!-- ==================== PROCESSO DE REDEFINIÇÃO DE SENHA ====================  -->
+  <bpmn:process id="Process_ResetPassword" name="Redefinição de Senha" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_ResetPassword" name="Usuário Clica no Link">
+      <bpmn:outgoing>Flow_RP1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_ValidateToken" name="Validar Token de Redefinição">
+      <bpmn:incoming>Flow_RP1</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_TokenValid" name="Token Válido e Não Expirado?">
+      <bpmn:incoming>Flow_RP2</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RPInvalidToken</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_ValidateNewPassword" name="Validar Nova Senha">
+      <bpmn:incoming>Flow_RP3</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP4</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_NewPasswordValid" name="Senha Válida?">
+      <bpmn:incoming>Flow_RP4</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RPInvalidPassword</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_EncodeNewPassword" name="Codificar Nova Senha">
+      <bpmn:incoming>Flow_RP5</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_UpdatePasswordDB" name="Atualizar Senha no Banco">
+      <bpmn:incoming>Flow_RP6</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP7</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_InvalidateToken" name="Invalidar Token Usado">
+      <bpmn:incoming>Flow_RP7</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP8</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_LogPasswordReset" name="Registrar Auditoria">
+      <bpmn:incoming>Flow_RP8</bpmn:incoming>
+      <bpmn:outgoing>Flow_RP9</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="EndEvent_RPSuccess" name="Senha Redefinida com Sucesso">
+      <bpmn:incoming>Flow_RP9</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_RPFail" name="Redefinição Falhou">
+      <bpmn:incoming>Flow_RPInvalidToken</bpmn:incoming>
+      <bpmn:incoming>Flow_RPInvalidPassword</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_RP1" sourceRef="StartEvent_ResetPassword" targetRef="Task_ValidateToken"/>
+    <bpmn:sequenceFlow id="Flow_RP2" sourceRef="Task_ValidateToken" targetRef="Gateway_TokenValid"/>
+    <bpmn:sequenceFlow id="Flow_RP3" name="Sim" sourceRef="Gateway_TokenValid" targetRef="Task_ValidateNewPassword"/>
+    <bpmn:sequenceFlow id="Flow_RPInvalidToken" name="Não" sourceRef="Gateway_TokenValid" targetRef="EndEvent_RPFail"/>
+    <bpmn:sequenceFlow id="Flow_RP4" sourceRef="Task_ValidateNewPassword" targetRef="Gateway_NewPasswordValid"/>
+    <bpmn:sequenceFlow id="Flow_RP5" name="Sim" sourceRef="Gateway_NewPasswordValid" targetRef="Task_EncodeNewPassword"/>
+    <bpmn:sequenceFlow id="Flow_RPInvalidPassword" name="Não" sourceRef="Gateway_NewPasswordValid" targetRef="EndEvent_RPFail"/>
+    <bpmn:sequenceFlow id="Flow_RP6" sourceRef="Task_EncodeNewPassword" targetRef="Task_UpdatePasswordDB"/>
+    <bpmn:sequenceFlow id="Flow_RP7" sourceRef="Task_UpdatePasswordDB" targetRef="Task_InvalidateToken"/>
+    <bpmn:sequenceFlow id="Flow_RP8" sourceRef="Task_InvalidateToken" targetRef="Task_LogPasswordReset"/>
+    <bpmn:sequenceFlow id="Flow_RP9" sourceRef="Task_LogPasswordReset" targetRef="EndEvent_RPSuccess"/>
+  </bpmn:process>
+
+  <!-- ==================== DIAGRAMAS ====================  -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Authentication">
+      <bpmndi:BPMNEdge id="Flow_RegisterFail_di" bpmnElement="Flow_RegisterFail"/>
+      <bpmndi:BPMNEdge id="Flow_Register1_di" bpmnElement="Flow_Register1"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
