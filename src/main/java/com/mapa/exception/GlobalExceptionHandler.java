@@ -97,6 +97,17 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
+    @ExceptionHandler(AlreadyEnrolledException.class)
+    public ResponseEntity<ApiErrorDTO> handleAlreadyEnrolled(
+            AlreadyEnrolledException alreadyEnrolledException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                alreadyEnrolledException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorDTO> handleInvalidRequestBody(
             MethodArgumentNotValidException validationException, HttpServletRequest httpRequest) {
