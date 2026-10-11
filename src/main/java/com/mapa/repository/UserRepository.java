@@ -4,6 +4,9 @@ import com.mapa.domain.User;
 import com.mapa.domain.enums.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -18,5 +21,9 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByResetToken(String resetToken);
 
     long countByRoleAndActiveTrueAndIdNot(Role role, Long id);
+
+    @Modifying
+    @Query("UPDATE User user SET user.motorAtivoId = null WHERE user.motorAtivoId = :engineId")
+    void clearActiveEngineReference(@Param("engineId") Long engineId);
 }
 

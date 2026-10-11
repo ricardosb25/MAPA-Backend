@@ -61,6 +61,9 @@ public class User {
     @Column(name = "terms_accepted_at")
     private OffsetDateTime termsAcceptedAt;
 
+    @Column(name = "motor_ativo_id")
+    private Long motorAtivoId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

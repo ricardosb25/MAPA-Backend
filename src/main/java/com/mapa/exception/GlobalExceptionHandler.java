@@ -53,6 +53,17 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
+    @ExceptionHandler(InvalidEcuMapValueException.class)
+    public ResponseEntity<ApiErrorDTO> handleInvalidEcuMapValue(
+            InvalidEcuMapValueException invalidEcuMapValueException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                invalidEcuMapValueException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
     @ExceptionHandler(RoleNotAllowedException.class)
     public ResponseEntity<ApiErrorDTO> handleRoleNotAllowed(
             RoleNotAllowedException roleNotAllowedException, HttpServletRequest httpRequest) {
