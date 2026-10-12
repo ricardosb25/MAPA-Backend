@@ -64,6 +64,17 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
+    @ExceptionHandler(ActiveMotorNotSelectedException.class)
+    public ResponseEntity<ApiErrorDTO> handleActiveMotorNotSelected(
+            ActiveMotorNotSelectedException activeMotorNotSelectedException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                activeMotorNotSelectedException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
     @ExceptionHandler(RoleNotAllowedException.class)
     public ResponseEntity<ApiErrorDTO> handleRoleNotAllowed(
             RoleNotAllowedException roleNotAllowedException, HttpServletRequest httpRequest) {
