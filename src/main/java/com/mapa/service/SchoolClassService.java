@@ -51,6 +51,7 @@ public class SchoolClassService {
     private final SchoolClassRepository schoolClassRepository;
     private final ClassEnrollmentRepository classEnrollmentRepository;
     private final UserRepository userRepository;
+    private final ChallengeService challengeService;
 
     @Transactional(readOnly = true)
     public PageResponseDTO<ClassResponseDTO> findAllByTeacher(String search, Shift shift, Pageable pageable) {
@@ -110,6 +111,7 @@ public class SchoolClassService {
         SchoolClass schoolClass = findEntityById(classId);
         requireOwnClass(schoolClass);
 
+        challengeService.deleteAllByClass(classId);
         classEnrollmentRepository.deleteBySchoolClassId(classId);
         schoolClassRepository.delete(schoolClass);
     }

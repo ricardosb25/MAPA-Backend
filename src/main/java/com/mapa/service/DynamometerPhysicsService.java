@@ -35,6 +35,7 @@ public class DynamometerPhysicsService {
     private final EcuMapDefaultRepository ecuMapDefaultRepository;
     private final EcuMapTuningRepository ecuMapTuningRepository;
     private final DynamometerTestRepository dynamometerTestRepository;
+    private final ChallengeService challengeService;
 
     @Transactional
     public DynoResultDTO runSimulation() {
@@ -57,7 +58,7 @@ public class DynamometerPhysicsService {
 
         DynamometerPhysics.SimulationResult result = DynamometerPhysics.run(input);
 
-        dynamometerTestRepository.save(DynamometerTest.builder()
+        DynamometerTest dynamometerTest = dynamometerTestRepository.save(DynamometerTest.builder()
                 .userId(userId)
                 .motorId(motor.getId())
                 .maxPower(result.peakPower())
@@ -65,6 +66,8 @@ public class DynamometerPhysicsService {
                 .averageAfr(result.averageAfr())
                 .engineStatus(result.finalStatus())
                 .build());
+
+        challengeService.registerSimulationAttempts(user, motor, dynamometerTest);
 
         return new DynoResultDTO(
                 result.rpmAxis(),
@@ -76,9 +79,6 @@ public class DynamometerPhysicsService {
                 result.peakTorque());
     }
 
-    /**
-     * Histórico de puxadas do usuário autenticado, do mais recente para o mais antigo.
-     */
     @Transactional(readOnly = true)
     public List<DynoTestResponseDTO> findHistory() {
         return dynamometerTestRepository.findByUserIdOrderByTestedAtDesc(currentUser().getId())

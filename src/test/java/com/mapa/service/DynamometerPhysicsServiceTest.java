@@ -60,6 +60,9 @@ class DynamometerPhysicsServiceTest {
     @Mock
     private DynamometerTestRepository dynamometerTestRepository;
 
+    @Mock
+    private ChallengeService challengeService;
+
     @InjectMocks
     private DynamometerPhysicsService dynamometerPhysicsService;
 
@@ -75,6 +78,8 @@ class DynamometerPhysicsServiceTest {
         when(motorRepository.findById(1L)).thenReturn(Optional.of(aspiratedMotor()));
         when(ecuMapDefaultRepository.findByDisplacementClassAndMapType(any(), any()))
                 .thenAnswer(invocation -> Optional.of(factoryMap(invocation.getArgument(1))));
+        when(dynamometerTestRepository.save(any(DynamometerTest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         DynoResultDTO result = dynamometerPhysicsService.runSimulation();
 
@@ -87,6 +92,7 @@ class DynamometerPhysicsServiceTest {
         assertEquals(EngineStatus.INTEGRO, savedTest.getValue().getEngineStatus());
         assertEquals(5L, savedTest.getValue().getUserId());
         assertEquals(1L, savedTest.getValue().getMotorId());
+        verify(challengeService).registerSimulationAttempts(any(User.class), any(Motor.class), any(DynamometerTest.class));
     }
 
     @Test
