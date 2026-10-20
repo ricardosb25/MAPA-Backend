@@ -22,7 +22,7 @@ public record ClassResponseDTO(
         Shift shift,
 
         @Schema(description = "Nome do professor responsável", example = "Helena Duarte")
-        String professorName,
+        String teacherName,
 
         @Schema(description = "Quantidade de alunos matriculados", example = "2")
         long studentCount,

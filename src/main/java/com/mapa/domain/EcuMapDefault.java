@@ -27,9 +27,9 @@ import java.util.List;
 
 @Entity
 @Table(
-        name = "ecu_map_generic_defaults",
+        name = "ecu_map_defaults",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_ecu_map_generic_defaults_classe_tipo",
+                name = "uk_ecu_map_defaults_displacement_map_type",
                 columnNames = {"displacement_class", "map_type"}))
 @Getter
 @Setter
@@ -61,10 +61,10 @@ public class EcuMapDefault {
     @Column(name = "factory_values", nullable = false, length = 4000)
     private List<List<Integer>> factoryValues;
 
-    @Column(name = "criado_em", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "atualizado_em", nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
     @PrePersist

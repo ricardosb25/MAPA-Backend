@@ -22,7 +22,7 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "challenge_participations",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"challenge_id", "student_id"}))
+        uniqueConstraints = @UniqueConstraint(name = "uk_challenge_participations_challenge_student", columnNames = {"challenge_id", "student_id"}))
 @Getter
 @Setter
 @NoArgsConstructor

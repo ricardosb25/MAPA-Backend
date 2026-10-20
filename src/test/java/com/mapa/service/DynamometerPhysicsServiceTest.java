@@ -83,9 +83,9 @@ class DynamometerPhysicsServiceTest {
 
         DynoResultDTO result = dynamometerPhysicsService.runSimulation();
 
-        assertEquals(EngineStatus.INTEGRO, result.statusFinal());
-        assertEquals(23, result.rpmEixoX().size());
-        assertEquals(result.curvaPotencia().size(), result.curvaTorque().size());
+        assertEquals(EngineStatus.INTEGRO, result.finalStatus());
+        assertEquals(23, result.rpmAxis().size());
+        assertEquals(result.powerCurve().size(), result.torqueCurve().size());
 
         ArgumentCaptor<DynamometerTest> savedTest = ArgumentCaptor.forClass(DynamometerTest.class);
         verify(dynamometerTestRepository).save(savedTest.capture());
@@ -122,7 +122,7 @@ class DynamometerPhysicsServiceTest {
 
         DynoResultDTO result = dynamometerPhysicsService.runSimulation();
 
-        assertEquals(EngineStatus.QUEBRADO_POBRE, result.statusFinal());
+        assertEquals(EngineStatus.QUEBRADO_POBRE, result.finalStatus());
 
         ArgumentCaptor<DynamometerTest> savedTest = ArgumentCaptor.forClass(DynamometerTest.class);
         verify(dynamometerTestRepository).save(savedTest.capture());
@@ -150,8 +150,8 @@ class DynamometerPhysicsServiceTest {
 
         assertEquals(1, history.size());
         assertEquals(9L, history.get(0).id());
-        assertEquals("INTEGRO", history.get(0).statusFinal());
-        assertEquals(131.5, history.get(0).potenciaMaxima());
+        assertEquals("INTEGRO", history.get(0).finalStatus());
+        assertEquals(131.5, history.get(0).maxPower());
     }
 
     private EcuMapTuning tuningWithConstantValue(int value) {
@@ -197,7 +197,7 @@ class DynamometerPhysicsServiceTest {
                 .build();
     }
 
-    private User user(Long id, Role role, Long motorAtivoId) {
+    private User user(Long id, Role role, Long activeMotorId) {
         return User.builder()
                 .id(id)
                 .fullName("Ana Lima")
@@ -205,7 +205,7 @@ class DynamometerPhysicsServiceTest {
                 .passwordHash("hash")
                 .role(role)
                 .active(true)
-                .motorAtivoId(motorAtivoId)
+                .activeMotorId(activeMotorId)
                 .build();
     }
 

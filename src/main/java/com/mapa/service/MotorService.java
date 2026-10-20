@@ -68,11 +68,11 @@ public class MotorService {
     public Optional<MotorResponseDTO> findSelectedMotor() {
         User currentUser = currentUser();
 
-        if (currentUser.getMotorAtivoId() == null) {
+        if (currentUser.getActiveMotorId() == null) {
             return Optional.empty();
         }
 
-        return motorRepository.findById(currentUser.getMotorAtivoId())
+        return motorRepository.findById(currentUser.getActiveMotorId())
                 .map(MotorResponseDTO::fromEntity);
     }
 
@@ -81,7 +81,7 @@ public class MotorService {
         Motor motor = findEntityById(engineId);
 
         User currentUser = currentUser();
-        currentUser.setMotorAtivoId(motor.getId());
+        currentUser.setActiveMotorId(motor.getId());
         userRepository.save(currentUser);
 
         return MotorResponseDTO.fromEntity(motor);
@@ -90,7 +90,7 @@ public class MotorService {
     @Transactional
     public void clearSelectedMotor() {
         User currentUser = currentUser();
-        currentUser.setMotorAtivoId(null);
+        currentUser.setActiveMotorId(null);
         userRepository.save(currentUser);
     }
 

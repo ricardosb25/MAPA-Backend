@@ -23,7 +23,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     long countByRoleAndActiveTrueAndIdNot(Role role, Long id);
 
     @Modifying
-    @Query("UPDATE User user SET user.motorAtivoId = null WHERE user.motorAtivoId = :engineId")
+    @Query("UPDATE User user SET user.activeMotorId = null WHERE user.activeMotorId = :engineId")
     void clearActiveEngineReference(@Param("engineId") Long engineId);
 }
 

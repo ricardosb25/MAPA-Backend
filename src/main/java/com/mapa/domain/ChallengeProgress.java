@@ -23,8 +23,8 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(
-        name = "desafio_progresso",
-        uniqueConstraints = @UniqueConstraint(name = "uk_desafio_aluno", columnNames = {"desafio_id", "aluno_id"})
+        name = "challenge_progress",
+        uniqueConstraints = @UniqueConstraint(name = "uk_challenge_progress_challenge_student", columnNames = {"challenge_id", "student_id"})
 )
 @Getter
 @Setter
@@ -38,35 +38,35 @@ public class ChallengeProgress {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "desafio_id", nullable = false)
+    @JoinColumn(name = "challenge_id", nullable = false)
     private Challenge challenge;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "aluno_id", nullable = false)
+    @JoinColumn(name = "student_id", nullable = false)
     private User student;
 
-    @Column(name = "selecionado", nullable = false)
+    @Column(name = "selected", nullable = false)
     @Builder.Default
     private boolean selected = false;
 
-    @Column(name = "tentativas", nullable = false)
+    @Column(name = "attempts", nullable = false)
     @Builder.Default
     private int attempts = 0;
 
-    @Column(name = "concluido", nullable = false)
+    @Column(name = "completed", nullable = false)
     @Builder.Default
     private boolean completed = false;
 
-    @Column(name = "ultima_potencia")
+    @Column(name = "last_peak_power")
     private Double lastPeakPower;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ultimo_status", length = 30)
+    @Column(name = "last_engine_status", length = 30)
     private EngineStatus lastEngineStatus;
 
-    @Column(name = "selecionado_em")
+    @Column(name = "selected_at")
     private OffsetDateTime selectedAt;
 
-    @Column(name = "concluido_em")
+    @Column(name = "completed_at")
     private OffsetDateTime completedAt;
 }

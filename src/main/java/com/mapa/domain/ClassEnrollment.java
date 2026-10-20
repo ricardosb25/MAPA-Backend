@@ -20,7 +20,7 @@ import lombok.Setter;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "class_enrollments", uniqueConstraints = @UniqueConstraint(columnNames = {"class_id", "student_id"}))
+@Table(name = "class_enrollments", uniqueConstraints = @UniqueConstraint(name = "uk_class_enrollments_class_student", columnNames = {"class_id", "student_id"}))
 @Getter
 @Setter
 @NoArgsConstructor

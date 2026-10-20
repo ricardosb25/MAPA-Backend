@@ -120,13 +120,13 @@ public class DynamometerPhysicsService {
     }
 
     private Motor findActiveMotor(User user) {
-        if (user.getMotorAtivoId() == null) {
+        if (user.getActiveMotorId() == null) {
             throw new ActiveMotorNotSelectedException();
         }
 
-        return motorRepository.findById(user.getMotorAtivoId())
+        return motorRepository.findById(user.getActiveMotorId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Motor ativo não encontrado com id: " + user.getMotorAtivoId()));
+                        "Motor ativo não encontrado com id: " + user.getActiveMotorId()));
     }
 
     private User currentUser() {

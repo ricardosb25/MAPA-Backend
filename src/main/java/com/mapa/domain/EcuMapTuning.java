@@ -27,7 +27,7 @@ import java.util.List;
 @Table(
         name = "ecu_map_tunings",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_ecu_map_tunings_usuario_motor_tipo",
+                name = "uk_ecu_map_tunings_user_motor_map_type",
                 columnNames = {"user_id", "motor_id", "map_type"}))
 @Getter
 @Setter
@@ -54,10 +54,10 @@ public class EcuMapTuning {
     @Column(name = "tuned_values", nullable = false, length = 4000)
     private List<List<Integer>> tunedValues;
 
-    @Column(name = "criado_em", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "atualizado_em", nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
     @PrePersist

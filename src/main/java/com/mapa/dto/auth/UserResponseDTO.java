@@ -11,7 +11,7 @@ public record UserResponseDTO(
         String email,
         Role role,
         boolean active,
-        Long motorAtivoId,
+        Long activeMotorId,
         OffsetDateTime createdAt
 ) {
     public static UserResponseDTO fromEntity(User user) {
@@ -21,7 +21,7 @@ public record UserResponseDTO(
                 user.getEmail(),
                 user.getRole(),
                 user.isActive(),
-                user.getMotorAtivoId(),
+                user.getActiveMotorId(),
                 user.getCreatedAt()
         );
     }

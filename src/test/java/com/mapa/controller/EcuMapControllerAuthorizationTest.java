@@ -152,7 +152,7 @@ class EcuMapControllerAuthorizationTest {
         String studentToken = registerUserAndGetToken(Role.STUDENT);
         String selectionUri = "/api/v1/motores/selecionado";
 
-        assertNull(currentUser(studentToken).motorAtivoId());
+        assertNull(currentUser(studentToken).activeMotorId());
 
         ResponseEntity<MotorResponseDTO> selectResponse = restClient().put().uri(selectionUri)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -162,7 +162,7 @@ class EcuMapControllerAuthorizationTest {
         assertEquals(HttpStatus.OK, selectResponse.getStatusCode());
         assertNotNull(selectResponse.getBody());
         assertEquals(motorId, selectResponse.getBody().id());
-        assertEquals(motorId, currentUser(studentToken).motorAtivoId());
+        assertEquals(motorId, currentUser(studentToken).activeMotorId());
 
         ResponseEntity<MotorResponseDTO> findResponse = restClient().get().uri(selectionUri)
                 .header("Authorization", "Bearer " + studentToken)
@@ -175,7 +175,7 @@ class EcuMapControllerAuthorizationTest {
                 .header("Authorization", "Bearer " + studentToken)
                 .retrieve().toBodilessEntity().getStatusCode();
         assertEquals(HttpStatus.NO_CONTENT, clearStatus);
-        assertNull(currentUser(studentToken).motorAtivoId());
+        assertNull(currentUser(studentToken).activeMotorId());
 
         ResponseEntity<MotorResponseDTO> emptyResponse = restClient().get().uri(selectionUri)
                 .header("Authorization", "Bearer " + studentToken)

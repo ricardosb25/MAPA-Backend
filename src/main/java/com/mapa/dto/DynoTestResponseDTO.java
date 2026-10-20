@@ -15,19 +15,19 @@ public record DynoTestResponseDTO(
         Long motorId,
 
         @Schema(description = "Pico de potência atingido (cv)", example = "131.8")
-        Double potenciaMaxima,
+        Double maxPower,
 
         @Schema(description = "Pico de torque atingido (kgfm)", example = "15.7")
-        Double torqueMaximo,
+        Double maxTorque,
 
         @Schema(description = "Razão ar/combustível média da puxada", example = "14.1")
-        Double afrMedio,
+        Double averageAfr,
 
         @Schema(description = "Estado final do motor virtual", example = "INTEGRO")
-        String statusFinal,
+        String finalStatus,
 
         @Schema(description = "Data e hora da simulação")
-        OffsetDateTime dataTeste
+        OffsetDateTime testedAt
 ) {
 
     public static DynoTestResponseDTO fromEntity(DynamometerTest test) {

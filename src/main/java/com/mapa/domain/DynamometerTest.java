@@ -19,7 +19,7 @@ import lombok.Setter;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "teste_dinamometro")
+@Table(name = "dynamometer_tests")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -37,20 +37,20 @@ public class DynamometerTest {
     @Column(name = "motor_id", nullable = false)
     private Long motorId;
 
-    @Column(name = "potencia_maxima", nullable = false)
+    @Column(name = "max_power", nullable = false)
     private Double maxPower;
 
-    @Column(name = "torque_maximo", nullable = false)
+    @Column(name = "max_torque", nullable = false)
     private Double maxTorque;
 
-    @Column(name = "afr_medio", nullable = false)
+    @Column(name = "average_afr", nullable = false)
     private Double averageAfr;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status_motor", nullable = false, length = 30)
+    @Column(name = "engine_status", nullable = false, length = 30)
     private EngineStatus engineStatus;
 
-    @Column(name = "data_teste", nullable = false, updatable = false)
+    @Column(name = "tested_at", nullable = false, updatable = false)
     private OffsetDateTime testedAt;
 
     @PrePersist

@@ -60,10 +60,10 @@ class ChallengeIntegrationTest {
         selectMotor(studentToken, motorId);
 
         DynoResultDTO baseline = runDyno(studentToken);
-        assertEquals(EngineStatus.INTEGRO, baseline.statusFinal());
+        assertEquals(EngineStatus.INTEGRO, baseline.finalStatus());
 
         ChallengeResponseDTO challenge = createChallenge(teacherToken, schoolClass.id(), motorId,
-                goalBelow(baseline.picoPotencia()), "Potência mínima E2E");
+                goalBelow(baseline.peakPower()), "Potência mínima E2E");
 
         assertEquals(2, challenge.criteria().size());
         assertFalse(challenge.selected());
@@ -289,9 +289,9 @@ class ChallengeIntegrationTest {
                 .header("Authorization", "Bearer " + token)
                 .retrieve().body(DynoResultDTO.class);
         assertNotNull(result);
-        assertNotNull(result.picoPotencia());
-        assertNotNull(result.picoTorque());
-        assertNotNull(result.statusFinal());
+        assertNotNull(result.peakPower());
+        assertNotNull(result.peakTorque());
+        assertNotNull(result.finalStatus());
         return result;
     }
 

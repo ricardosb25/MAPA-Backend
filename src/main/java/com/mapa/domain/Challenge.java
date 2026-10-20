@@ -23,7 +23,7 @@ import lombok.Setter;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "desafios")
+@Table(name = "challenges")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -35,14 +35,14 @@ public class Challenge {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "titulo", nullable = false, length = 120)
+    @Column(name = "title", nullable = false, length = 120)
     private String title;
 
-    @Column(name = "descricao", nullable = false, length = 255)
+    @Column(name = "description", nullable = false, length = 255)
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "dificuldade", nullable = false, length = 20)
+    @Column(name = "difficulty", nullable = false, length = 20)
     private ChallengeDifficulty difficulty;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -50,23 +50,23 @@ public class Challenge {
     private Motor motor;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "turma_id", nullable = false)
+    @JoinColumn(name = "class_id", nullable = false)
     private SchoolClass schoolClass;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "professor_id", nullable = false)
+    @JoinColumn(name = "teacher_id", nullable = false)
     private User teacher;
 
-    @Column(name = "potencia_alvo_cv", nullable = false)
+    @Column(name = "goal_power_cv", nullable = false)
     private Integer goalPowerCv;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status_motor_alvo", nullable = false, length = 30,
+    @Column(name = "required_engine_status", nullable = false, length = 30,
             columnDefinition = "varchar(30) default 'INTEGRO'")
     @Builder.Default
     private EngineStatus requiredEngineStatus = EngineStatus.INTEGRO;
 
-    @Column(name = "criado_em", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @PrePersist

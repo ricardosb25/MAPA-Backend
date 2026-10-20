@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "motores")
+@Table(name = "motors")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,31 +29,31 @@ public class Motor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "fabricante", nullable = false, length = 50)
+    @Column(name = "manufacturer", nullable = false, length = 50)
     private String manufacturer;
 
-    @Column(name = "nome", nullable = false, length = 50)
+    @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    @Column(name = "descricao", length = 255)
+    @Column(name = "description", length = 255)
     private String description;
 
-    @Column(name = "cilindrada_litros", nullable = false, precision = 3, scale = 1)
+    @Column(name = "displacement_liters", nullable = false, precision = 3, scale = 1)
     private BigDecimal displacementLiters;
 
-    @Column(name = "cilindrada_cc", nullable = false)
+    @Column(name = "displacement_cc", nullable = false)
     private Integer displacementCc;
 
-    @Column(name = "taxa_compressao", nullable = false, precision = 4, scale = 1)
+    @Column(name = "compression_ratio", nullable = false, precision = 4, scale = 1)
     private BigDecimal compressionRatio;
 
-    @Column(name = "corte_rpm", nullable = false)
+    @Column(name = "rpm_cutoff", nullable = false)
     private Integer rpmCutoff;
 
-    @Column(name = "tipo_aspiracao", nullable = false, length = 20)
+    @Column(name = "aspiration_type", nullable = false, length = 20)
     private String aspirationType;
 
-    @Column(name = "criado_em", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @PrePersist
