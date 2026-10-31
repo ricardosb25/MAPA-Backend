@@ -64,6 +64,12 @@ public class User {
     @Column(name = "active_motor_id")
     private Long activeMotorId;
 
+    @Column(name = "email_changed_at")
+    private OffsetDateTime emailChangedAt;
+
+    @Column(name = "password_changed_at")
+    private OffsetDateTime passwordChangedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

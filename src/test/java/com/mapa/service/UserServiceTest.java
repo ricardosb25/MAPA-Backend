@@ -8,6 +8,7 @@ import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.dto.user.UserCreateRequestDTO;
 import com.mapa.dto.user.UserUpdateRequestDTO;
 import com.mapa.exception.RoleNotAllowedException;
+import com.mapa.exception.AccountSettingsException;
 import com.mapa.repository.UserRepository;
 import com.mapa.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -123,16 +124,26 @@ class UserServiceTest {
         User student = user(1L, "Ana Silva", "ana@email.com", Role.STUDENT);
         authenticateAs(student);
         when(userRepository.findById(1L)).thenReturn(Optional.of(student));
-        when(userRepository.findByEmail("ana.souza@email.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserResponseDTO updatedUser = userService.update(1L,
-                new UserUpdateRequestDTO("Ana Souza", "ana.souza@email.com", null, null));
+                new UserUpdateRequestDTO("Ana Souza", "ana@email.com", null, null));
 
         assertEquals("Ana Souza", updatedUser.fullName());
-        assertEquals("ana.souza@email.com", updatedUser.email());
+        assertEquals("ana@email.com", updatedUser.email());
         verify(userAuditLogService).recordByCurrentUser(
-                eq(UserAuditAction.USER_UPDATED), eq(1L), eq("ana.souza@email.com"), contains("fullName"));
+                eq(UserAuditAction.USER_UPDATED), eq(1L), eq("ana@email.com"), contains("fullName"));
+    }
+
+    @Test
+    void shouldRequireSettingsEndpointForOwnEmailChange() {
+        User student = user(1L, "Ana Silva", "ana@email.com", Role.STUDENT);
+        authenticateAs(student);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(student));
+
+        assertThrows(AccountSettingsException.class, () -> userService.update(1L,
+                new UserUpdateRequestDTO("Ana Silva", "other@email.com", null, null)));
+        verify(userRepository, never()).save(any());
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.dto.user.UserCreateRequestDTO;
 import com.mapa.dto.user.UserUpdateRequestDTO;
 import com.mapa.exception.EmailAlreadyExistsException;
+import com.mapa.exception.AccountSettingsException;
 import com.mapa.exception.InvalidCredentialsException;
 import com.mapa.exception.ResourceNotFoundException;
 import com.mapa.exception.RoleNotAllowedException;
@@ -96,6 +97,10 @@ public class UserService {
 
         String normalizedEmail = normalizeEmail(request.email());
         if (!normalizedEmail.equals(user.getEmail())) {
+            if (Objects.equals(principal.getId(), user.getId())) {
+                throw new AccountSettingsException(
+                        "Use as configurações da conta para alterar seu e-mail com a senha atual.");
+            }
             ensureEmailAvailable(normalizedEmail, user.getId());
             changes.add("email: '" + user.getEmail() + "' -> '" + normalizedEmail + "'");
             user.setEmail(normalizedEmail);

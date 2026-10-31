@@ -20,6 +20,12 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(AccountSettingsException.class)
+    public ResponseEntity<ApiErrorDTO> handleAccountSettings(
+            AccountSettingsException exception, HttpServletRequest httpRequest) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), httpRequest, List.of());
+    }
+
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<ApiErrorDTO> handleEmailAlreadyExists(
             EmailAlreadyExistsException emailAlreadyExistsException, HttpServletRequest httpRequest) {

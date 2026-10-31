@@ -10,6 +10,8 @@ public enum UserAuditAction {
     USER_UPDATED("Usuário editado", UserAuditLogLevel.INFO),
     USER_ANONYMIZED("Usuário anonimizado", UserAuditLogLevel.AVISO),
     PASSWORD_RESET("Senha redefinida", UserAuditLogLevel.AVISO),
+    EMAIL_CHANGED("E-mail alterado", UserAuditLogLevel.AVISO),
+    PASSWORD_CHANGED("Senha alterada", UserAuditLogLevel.AVISO),
     TERMS_ACCEPTED("Termos aceitos", UserAuditLogLevel.INFO);
 
     private final String label;
