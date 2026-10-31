@@ -8,6 +8,7 @@ import com.mapa.service.AccountSettingsService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/account/settings")
 @RequiredArgsConstructor
 @Tag(name = "Configurações da conta")
+@PreAuthorize("hasAnyRole('STUDENT', 'TEACHER')")
 public class AccountSettingsController {
     private final AccountSettingsService settingsService;
 

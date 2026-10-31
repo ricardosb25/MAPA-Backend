@@ -149,4 +149,25 @@ class AccountSettingsServiceTest {
         when(userRepository.findAccountForUpdate(7L)).thenReturn(Optional.of(account));
         when(passwordEncoder.matches("current-password", "encoded-current")).thenReturn(true);
     }
+
+    @Test
+    void shouldRejectAdminPersonalSettings() {
+        account.setRole(Role.ADMIN);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(account));
+        when(userRepository.findAccountForUpdate(7L)).thenReturn(Optional.of(account));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> settingsService.findSettings());
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> settingsService.changeEmail(new EmailChangeRequestDTO("new@mapa.test", "current-password")));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> settingsService.changePassword(new PasswordChangeRequestDTO("current-password", "new-password")));
+        verifyNoInteractions(passwordEncoder, auditLogService);
+    }
+
+    @Test
+    void shouldAllowTeacherPersonalSettings() {
+        account.setRole(Role.TEACHER);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(account));
+        assertEquals("ana@mapa.test", settingsService.findSettings().email());
+    }
 }

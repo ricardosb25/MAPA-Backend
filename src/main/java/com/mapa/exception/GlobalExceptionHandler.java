@@ -20,6 +20,12 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(BaseRestorationException.class)
+    public ResponseEntity<ApiErrorDTO> handleBaseRestoration(
+            BaseRestorationException exception, HttpServletRequest httpRequest) {
+        return buildErrorResponse(HttpStatus.CONFLICT, exception.getMessage(), httpRequest, List.of());
+    }
+
     @ExceptionHandler(AccountSettingsException.class)
     public ResponseEntity<ApiErrorDTO> handleAccountSettings(
             AccountSettingsException exception, HttpServletRequest httpRequest) {

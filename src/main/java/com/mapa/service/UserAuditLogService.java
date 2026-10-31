@@ -7,6 +7,7 @@ import com.mapa.dto.PageResponseDTO;
 import com.mapa.dto.user.UserAuditLogResponseDTO;
 import com.mapa.repository.UserAuditLogRepository;
 import com.mapa.security.UserPrincipal;
+import com.mapa.exception.InvalidCredentialsException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -69,6 +70,20 @@ public class UserAuditLogService {
                 targetUserId,
                 targetEmail,
                 details);
+    }
+
+    @Transactional
+    public void recordRequiredByCurrentUser(UserAuditAction action, String details) {
+        UserPrincipal principal = currentPrincipal();
+        if (principal == null) {
+            throw new InvalidCredentialsException();
+        }
+        userAuditLogRepository.saveAndFlush(UserAuditLog.builder()
+                .action(action)
+                .actorId(principal.getId())
+                .actorEmail(principal.getEmail())
+                .details(details)
+                .build());
     }
 
     @Transactional(readOnly = true)

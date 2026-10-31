@@ -1,6 +1,7 @@
 package com.mapa.service;
 
 import com.mapa.domain.User;
+import com.mapa.domain.enums.Role;
 import com.mapa.domain.enums.UserAuditAction;
 import com.mapa.dto.user.AccountSettingsResponseDTO;
 import com.mapa.dto.user.EmailChangeRequestDTO;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -91,6 +93,9 @@ public class AccountSettingsService {
     private void requireActive(User account) {
         if (!account.isActive()) {
             throw new InvalidCredentialsException();
+        }
+        if (account.getRole() != Role.STUDENT && account.getRole() != Role.TEACHER) {
+            throw new AccessDeniedException("Configurações pessoais disponíveis apenas para alunos e professores.");
         }
     }
 

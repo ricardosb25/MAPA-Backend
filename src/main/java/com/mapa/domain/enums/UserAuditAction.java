@@ -12,6 +12,8 @@ public enum UserAuditAction {
     PASSWORD_RESET("Senha redefinida", UserAuditLogLevel.AVISO),
     EMAIL_CHANGED("E-mail alterado", UserAuditLogLevel.AVISO),
     PASSWORD_CHANGED("Senha alterada", UserAuditLogLevel.AVISO),
+    MOTOR_BASE_RESTORED("Base de motores restaurada", UserAuditLogLevel.AVISO),
+    ECU_MAP_BASE_RESTORED("Base de mapas restaurada", UserAuditLogLevel.AVISO),
     TERMS_ACCEPTED("Termos aceitos", UserAuditLogLevel.INFO);
 
     private final String label;
