@@ -273,6 +273,41 @@ class UserServiceTest {
                 .build();
     }
 
+    @Test
+    void shouldBlockDemotingLastActiveAdminBeforeMutatingAccount() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        assertThrows(RoleNotAllowedException.class, () -> userService.update(9L,
+                new UserUpdateRequestDTO("Administrador", "admin@x.com", Role.STUDENT, null)));
+        assertEquals(Role.ADMIN, admin.getRole());
+        verify(userRepository).findAdministratorsForUpdate(Role.ADMIN);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void shouldBlockCombinedDemotionAndDeactivationOfLastAdmin() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        assertThrows(RoleNotAllowedException.class, () -> userService.update(9L,
+                new UserUpdateRequestDTO("Administrador", "admin@x.com", Role.TEACHER, false)));
+        assertEquals(Role.ADMIN, admin.getRole());
+        assertEquals(true, admin.isActive());
+    }
+
+    @Test
+    void shouldAllowDemotionWhenAnotherActiveAdminExistsAndRevokeSessions() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, 9L)).thenReturn(1L);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        userService.update(9L, new UserUpdateRequestDTO("Administrador", "admin@x.com", Role.TEACHER, null));
+        assertEquals(Role.TEACHER, admin.getRole());
+        assertEquals(1, admin.getCredentialsVersion());
+    }
+
     private void authenticateAs(User user) {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 new UserPrincipal(user),

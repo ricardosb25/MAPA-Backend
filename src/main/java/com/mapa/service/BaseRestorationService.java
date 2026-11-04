@@ -33,7 +33,7 @@ public class BaseRestorationService {
                     "Existem desafios vinculados aos motores. Remova esses desafios antes de restaurar a base.");
         }
         jdbcTemplate.update("DELETE FROM ecu_map_tunings");
-        jdbcTemplate.update("UPDATE users SET active_motor_id = NULL");
+        jdbcTemplate.update("UPDATE users SET active_motor_id = NULL, row_version = row_version + 1");
         jdbcTemplate.update("DELETE FROM motors");
         populate("sql/restore-motors.sql");
         auditLogService.recordRequiredByCurrentUser(UserAuditAction.MOTOR_BASE_RESTORED,

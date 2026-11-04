@@ -49,6 +49,7 @@ public class AccountSettingsService {
         }
         String previousEmail = account.getEmail();
         account.setEmail(normalizedEmail);
+        account.invalidateSessions();
         account.setEmailChangedAt(OffsetDateTime.now(ZoneOffset.UTC));
         clearResetToken(account);
         userRepository.saveAndFlush(account);
@@ -65,6 +66,7 @@ public class AccountSettingsService {
             throw new AccountSettingsException("A nova senha deve ser diferente da atual.");
         }
         account.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        account.invalidateSessions();
         account.setPasswordChangedAt(OffsetDateTime.now(ZoneOffset.UTC));
         clearResetToken(account);
         userRepository.saveAndFlush(account);

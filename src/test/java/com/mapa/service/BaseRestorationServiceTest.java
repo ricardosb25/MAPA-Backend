@@ -48,7 +48,7 @@ class BaseRestorationServiceTest {
                   compression_ratio NUMERIC(4,1) NOT NULL, rpm_cutoff INT NOT NULL,
                   aspiration_type VARCHAR(20) NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL)
                 """);
-        jdbcTemplate.execute("CREATE TABLE users (id BIGINT PRIMARY KEY, active_motor_id BIGINT)");
+        jdbcTemplate.execute("CREATE TABLE users (id BIGINT PRIMARY KEY, active_motor_id BIGINT, row_version BIGINT NOT NULL DEFAULT 0)");
         jdbcTemplate.execute("CREATE TABLE ecu_map_tunings (id BIGINT PRIMARY KEY, motor_id BIGINT)");
         jdbcTemplate.execute("""
                 CREATE TABLE ecu_map_defaults (
@@ -64,7 +64,7 @@ class BaseRestorationServiceTest {
                   compression_ratio, rpm_cutoff, aspiration_type, created_at)
                 VALUES ('CUSTOM', 'Custom motor', 1.0, 1000, 10.0, 6000, 'ASPIRADO', CURRENT_TIMESTAMP)
                 """);
-        jdbcTemplate.update("INSERT INTO users VALUES (1, 1)");
+        jdbcTemplate.update("INSERT INTO users (id, active_motor_id) VALUES (1, 1)");
         jdbcTemplate.update("INSERT INTO ecu_map_tunings VALUES (1, 1)");
         authenticate(Role.ADMIN);
     }

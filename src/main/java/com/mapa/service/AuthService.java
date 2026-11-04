@@ -103,7 +103,7 @@ public class AuthService {
         if (!user.isActive() || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtService.generateToken(user);
         return AuthResponseDTO.bearer(token, jwtProperties.getExpirationMs() / 1000, UserResponseDTO.fromEntity(user));
     }
 
@@ -133,12 +133,13 @@ public class AuthService {
 
     @Transactional
     public MessageResponseDTO resetPassword(ResetPasswordRequestDTO request) {
-        User user = userRepository.findByResetToken(request.token())
+        User user = userRepository.findByResetTokenForUpdate(request.token())
                 .filter(candidate -> candidate.getResetTokenExpiresAt() != null
                         && candidate.getResetTokenExpiresAt().isAfter(OffsetDateTime.now()))
                 .orElseThrow(InvalidResetTokenException::new);
 
         user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.invalidateSessions();
         user.setResetToken(null);
         user.setResetTokenExpiresAt(null);
         userRepository.save(user);

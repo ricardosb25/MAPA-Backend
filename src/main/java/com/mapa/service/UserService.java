@@ -90,10 +90,19 @@ public class UserService {
 
     @Transactional
     public UserResponseDTO update(Long userId, UserUpdateRequestDTO request) {
+        UserPrincipal principal = currentPrincipal();
+        if (isAdmin(principal) && (request.role() != null || request.active() != null)) {
+            userRepository.findAdministratorsForUpdate(Role.ADMIN);
+        }
         User user = findEntityById(userId);
-        UserPrincipal principal = requireAdminOrSelf(user);
+        requireAdminOrSelf(user);
+
+        requireActiveAdministratorRetained(user,
+                request.role() == null ? user.getRole() : request.role(),
+                request.active() == null ? user.isActive() : request.active());
 
         List<String> changes = new ArrayList<>();
+        boolean credentialsChanged = false;
 
         String normalizedEmail = normalizeEmail(request.email());
         if (!normalizedEmail.equals(user.getEmail())) {
@@ -104,6 +113,7 @@ public class UserService {
             ensureEmailAvailable(normalizedEmail, user.getId());
             changes.add("email: '" + user.getEmail() + "' -> '" + normalizedEmail + "'");
             user.setEmail(normalizedEmail);
+            credentialsChanged = true;
         }
 
         String fullName = request.fullName().trim();
@@ -116,23 +126,23 @@ public class UserService {
             requireAdmin(principal, "perfil");
             changes.add("role: '" + user.getRole() + "' -> '" + request.role() + "'");
             user.setRole(request.role());
+            credentialsChanged = true;
         }
 
         if (request.active() != null && request.active() != user.isActive()) {
             requireAdmin(principal, "situação ativa");
-            if (!request.active() && user.getRole() == Role.ADMIN
-                    && userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, user.getId()) == 0) {
-                throw new RoleNotAllowedException(
-                        "Operação não permitida: é necessário manter ao menos um administrador ativo");
-            }
             changes.add("active: '" + user.isActive() + "' -> '" + request.active() + "'");
             user.setActive(request.active());
+            credentialsChanged = true;
         }
 
         if (changes.isEmpty()) {
             return UserResponseDTO.fromEntity(user);
         }
 
+        if (credentialsChanged) {
+            user.invalidateSessions();
+        }
         User updatedUser = userRepository.save(user);
         userAuditLogService.recordByCurrentUser(
                 UserAuditAction.USER_UPDATED,
@@ -144,14 +154,13 @@ public class UserService {
 
     @Transactional
     public void anonymize(Long userId) {
+        if (isAdmin(currentPrincipal())) {
+            userRepository.findAdministratorsForUpdate(Role.ADMIN);
+        }
         User user = findEntityById(userId);
         UserPrincipal principal = requireAdminOrSelf(user);
 
-        if (user.getRole() == Role.ADMIN && user.isActive()
-                && userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, user.getId()) == 0) {
-            throw new RoleNotAllowedException(
-                    "Operação não permitida: é necessário manter ao menos um administrador ativo");
-        }
+        requireActiveAdministratorRetained(user, user.getRole(), false);
 
         String originalEmail = user.getEmail();
         user.setFullName(ANONYMIZED_FULL_NAME);
@@ -160,6 +169,7 @@ public class UserService {
         user.setResetToken(null);
         user.setResetTokenExpiresAt(null);
         user.setActive(false);
+        user.invalidateSessions();
         userRepository.save(user);
 
         userAuditLogService.recordByCurrentUser(
@@ -172,6 +182,15 @@ public class UserService {
 
     static String anonymizedEmailFor(Long userId) {
         return "anonimizado-" + userId + ANONYMIZED_EMAIL_DOMAIN;
+    }
+
+    private void requireActiveAdministratorRetained(User user, Role nextRole, boolean nextActive) {
+        if (user.getRole() == Role.ADMIN && user.isActive()
+                && (nextRole != Role.ADMIN || !nextActive)
+                && userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, user.getId()) == 0) {
+            throw new RoleNotAllowedException(
+                    "Operação não permitida: é necessário manter ao menos um administrador ativo");
+        }
     }
 
     private User findEntityById(Long userId) {

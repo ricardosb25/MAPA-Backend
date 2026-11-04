@@ -4,6 +4,7 @@ import com.mapa.dto.ApiErrorDTO;
 import com.mapa.dto.FieldValidationErrorDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,14 @@ import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorDTO> handleConcurrentAccountUpdate(
+            OptimisticLockingFailureException exception, HttpServletRequest httpRequest) {
+        return buildErrorResponse(HttpStatus.CONFLICT,
+                "A conta foi atualizada por outra operação. Atualize os dados e tente novamente.",
+                httpRequest, List.of());
+    }
 
     @ExceptionHandler(BaseRestorationException.class)
     public ResponseEntity<ApiErrorDTO> handleBaseRestoration(

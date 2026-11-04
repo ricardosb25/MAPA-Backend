@@ -89,6 +89,6 @@ class TeacherDashboardAuthorizationTest {
     }
 
     private MockHttpServletRequestBuilder authenticatedRequest(User account, String path) {
-        return get(path).header("Authorization", "Bearer " + jwtService.generateToken(account.getEmail(), account.getRole().name()));
+        return get(path).header("Authorization", "Bearer " + jwtService.generateToken(account));
     }
 }

@@ -58,7 +58,7 @@ class JwtAuthenticationFilterTest {
     @Test
     void shouldAuthenticateWithValidToken() throws Exception {
         User user = persistUser();
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtService.generateToken(user);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + token);
         SecurityContextHolder.clearContext();

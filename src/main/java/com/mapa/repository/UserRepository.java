@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
@@ -19,6 +20,14 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT account FROM User account WHERE account.id = :userId")
     Optional<User> findAccountForUpdate(@Param("userId") Long userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT account FROM User account WHERE account.role = :role ORDER BY account.id")
+    List<User> findAdministratorsForUpdate(@Param("role") Role role);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT account FROM User account WHERE account.resetToken = :token")
+    Optional<User> findByResetTokenForUpdate(@Param("token") String token);
 
     Optional<User> findByEmail(String email);
 
@@ -29,7 +38,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     long countByRoleAndActiveTrueAndIdNot(Role role, Long id);
 
     @Modifying
-    @Query("UPDATE User user SET user.activeMotorId = null WHERE user.activeMotorId = :engineId")
+    @Query("UPDATE User user SET user.activeMotorId = null, user.rowVersion = user.rowVersion + 1 WHERE user.activeMotorId = :engineId")
     void clearActiveEngineReference(@Param("engineId") Long engineId);
 }
 
