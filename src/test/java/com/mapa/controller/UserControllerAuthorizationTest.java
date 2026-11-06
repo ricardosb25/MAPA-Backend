@@ -51,6 +51,7 @@ class UserControllerAuthorizationTest {
         String studentToken = login(student.email());
 
         assertEquals(HttpStatus.FORBIDDEN, get(studentToken, "/api/v1/users"));
+        assertEquals(HttpStatus.FORBIDDEN, get(studentToken, "/api/v1/users?search=ana&role=STUDENT"));
         assertEquals(HttpStatus.FORBIDDEN, get(studentToken, "/api/v1/users/audit-logs"));
         assertEquals(HttpStatus.FORBIDDEN, post(studentToken, "/api/v1/users", createPayload("Criado Por Aluno")));
     }
@@ -88,6 +89,7 @@ class UserControllerAuthorizationTest {
         Long createdUserId = createResponse.getBody().id();
 
         assertEquals(HttpStatus.OK, get(adminToken, "/api/v1/users"));
+        assertEquals(HttpStatus.OK, get(adminToken, "/api/v1/users?search=admin&role=ADMIN&page=0&size=10"));
         assertEquals(HttpStatus.OK, get(adminToken, "/api/v1/users/" + createdUserId));
         assertEquals(HttpStatus.OK,
                 put(adminToken, "/api/v1/users/" + createdUserId, updatePayload("Aluno Editado", createResponse.getBody().email())));

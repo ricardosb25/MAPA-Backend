@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,6 +42,13 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "credentials_version", nullable = false, columnDefinition = "bigint default 0")
+    private long credentialsVersion;
+
+    @Version
+    @Column(name = "row_version", nullable = false, columnDefinition = "bigint default 0")
+    private long rowVersion;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private Role role;
@@ -61,11 +69,24 @@ public class User {
     @Column(name = "terms_accepted_at")
     private OffsetDateTime termsAcceptedAt;
 
+    @Column(name = "active_motor_id")
+    private Long activeMotorId;
+
+    @Column(name = "email_changed_at")
+    private OffsetDateTime emailChangedAt;
+
+    @Column(name = "password_changed_at")
+    private OffsetDateTime passwordChangedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    public void invalidateSessions() {
+        credentialsVersion = Math.incrementExact(credentialsVersion);
+    }
 
     @PrePersist
     protected void onCreate() {

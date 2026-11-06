@@ -3,12 +3,16 @@ package com.mapa.dto.auth;
 import com.mapa.domain.User;
 import com.mapa.domain.enums.Role;
 
+import java.time.OffsetDateTime;
+
 public record UserResponseDTO(
         Long id,
         String fullName,
         String email,
         Role role,
-        boolean active
+        boolean active,
+        Long activeMotorId,
+        OffsetDateTime createdAt
 ) {
     public static UserResponseDTO fromEntity(User user) {
         return new UserResponseDTO(
@@ -16,7 +20,9 @@ public record UserResponseDTO(
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole(),
-                user.isActive()
+                user.isActive(),
+                user.getActiveMotorId(),
+                user.getCreatedAt()
         );
     }
 }

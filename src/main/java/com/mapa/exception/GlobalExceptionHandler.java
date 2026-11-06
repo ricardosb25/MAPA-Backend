@@ -4,6 +4,7 @@ import com.mapa.dto.ApiErrorDTO;
 import com.mapa.dto.FieldValidationErrorDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,26 @@ import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorDTO> handleConcurrentAccountUpdate(
+            OptimisticLockingFailureException exception, HttpServletRequest httpRequest) {
+        return buildErrorResponse(HttpStatus.CONFLICT,
+                "A conta foi atualizada por outra operação. Atualize os dados e tente novamente.",
+                httpRequest, List.of());
+    }
+
+    @ExceptionHandler(BaseRestorationException.class)
+    public ResponseEntity<ApiErrorDTO> handleBaseRestoration(
+            BaseRestorationException exception, HttpServletRequest httpRequest) {
+        return buildErrorResponse(HttpStatus.CONFLICT, exception.getMessage(), httpRequest, List.of());
+    }
+
+    @ExceptionHandler(AccountSettingsException.class)
+    public ResponseEntity<ApiErrorDTO> handleAccountSettings(
+            AccountSettingsException exception, HttpServletRequest httpRequest) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), httpRequest, List.of());
+    }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<ApiErrorDTO> handleEmailAlreadyExists(
@@ -49,6 +70,28 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
                 invalidResetTokenException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(InvalidEcuMapValueException.class)
+    public ResponseEntity<ApiErrorDTO> handleInvalidEcuMapValue(
+            InvalidEcuMapValueException invalidEcuMapValueException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                invalidEcuMapValueException.getMessage(),
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(ActiveMotorNotSelectedException.class)
+    public ResponseEntity<ApiErrorDTO> handleActiveMotorNotSelected(
+            ActiveMotorNotSelectedException activeMotorNotSelectedException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                activeMotorNotSelectedException.getMessage(),
                 httpRequest,
                 List.of());
     }
@@ -93,6 +136,17 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(
                 HttpStatus.FORBIDDEN,
                 "Acesso negado: você não tem permissão para executar esta ação.",
+                httpRequest,
+                List.of());
+    }
+
+    @ExceptionHandler(AlreadyEnrolledException.class)
+    public ResponseEntity<ApiErrorDTO> handleAlreadyEnrolled(
+            AlreadyEnrolledException alreadyEnrolledException, HttpServletRequest httpRequest) {
+
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                alreadyEnrolledException.getMessage(),
                 httpRequest,
                 List.of());
     }

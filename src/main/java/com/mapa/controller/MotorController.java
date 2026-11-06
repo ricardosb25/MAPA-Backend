@@ -2,6 +2,7 @@ package com.mapa.controller;
 
 import com.mapa.dto.MotorRequestDTO;
 import com.mapa.dto.MotorResponseDTO;
+import com.mapa.dto.MotorSelectionRequestDTO;
 import com.mapa.dto.PageResponseDTO;
 import com.mapa.service.MotorService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -106,6 +107,41 @@ public class MotorController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long engineId) {
         motorService.delete(engineId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/selecionado")
+    @Operation(
+            summary = "Obter o motor ativo do usuário",
+            description = "Retorna o motor selecionado na bancada pelo usuário autenticado. "
+                    + "Retorna 204 quando nenhum motor está selecionado.")
+    @ApiResponse(responseCode = "200", description = "Motor ativo obtido com sucesso")
+    @ApiResponse(responseCode = "204", description = "Nenhum motor selecionado")
+    public ResponseEntity<MotorResponseDTO> findSelectedMotor() {
+        return motorService.findSelectedMotor()
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @PutMapping("/selecionado")
+    @Operation(
+            summary = "Definir o motor ativo do usuário",
+            description = "Persiste no banco de dados o motor escolhido pelo usuário autenticado na bancada. "
+                    + "Acesso permitido a todos os perfis autenticados.")
+    @ApiResponse(responseCode = "200", description = "Motor ativo atualizado com sucesso")
+    @ApiResponse(responseCode = "400", description = "Identificador do motor ausente")
+    @ApiResponse(responseCode = "404", description = "Motor não encontrado")
+    public ResponseEntity<MotorResponseDTO> selectMotor(@Valid @RequestBody MotorSelectionRequestDTO selectionRequest) {
+        return ResponseEntity.ok(motorService.selectMotor(selectionRequest.engineId()));
+    }
+
+    @DeleteMapping("/selecionado")
+    @Operation(
+            summary = "Limpar o motor ativo do usuário",
+            description = "Remove a seleção do motor ativo do usuário autenticado.")
+    @ApiResponse(responseCode = "204", description = "Seleção removida com sucesso")
+    public ResponseEntity<Void> clearSelectedMotor() {
+        motorService.clearSelectedMotor();
         return ResponseEntity.noContent().build();
     }
 }

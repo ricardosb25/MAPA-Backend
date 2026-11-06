@@ -3,10 +3,12 @@ package com.mapa.service;
 import com.mapa.domain.User;
 import com.mapa.domain.enums.Role;
 import com.mapa.domain.enums.UserAuditAction;
+import com.mapa.dto.PageResponseDTO;
 import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.dto.user.UserCreateRequestDTO;
 import com.mapa.dto.user.UserUpdateRequestDTO;
 import com.mapa.exception.RoleNotAllowedException;
+import com.mapa.exception.AccountSettingsException;
 import com.mapa.repository.UserRepository;
 import com.mapa.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +17,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -117,16 +124,26 @@ class UserServiceTest {
         User student = user(1L, "Ana Silva", "ana@email.com", Role.STUDENT);
         authenticateAs(student);
         when(userRepository.findById(1L)).thenReturn(Optional.of(student));
-        when(userRepository.findByEmail("ana.souza@email.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserResponseDTO updatedUser = userService.update(1L,
-                new UserUpdateRequestDTO("Ana Souza", "ana.souza@email.com", null, null));
+                new UserUpdateRequestDTO("Ana Souza", "ana@email.com", null, null));
 
         assertEquals("Ana Souza", updatedUser.fullName());
-        assertEquals("ana.souza@email.com", updatedUser.email());
+        assertEquals("ana@email.com", updatedUser.email());
         verify(userAuditLogService).recordByCurrentUser(
-                eq(UserAuditAction.USER_UPDATED), eq(1L), eq("ana.souza@email.com"), contains("fullName"));
+                eq(UserAuditAction.USER_UPDATED), eq(1L), eq("ana@email.com"), contains("fullName"));
+    }
+
+    @Test
+    void shouldRequireSettingsEndpointForOwnEmailChange() {
+        User student = user(1L, "Ana Silva", "ana@email.com", Role.STUDENT);
+        authenticateAs(student);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(student));
+
+        assertThrows(AccountSettingsException.class, () -> userService.update(1L,
+                new UserUpdateRequestDTO("Ana Silva", "other@email.com", null, null)));
+        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -188,6 +205,63 @@ class UserServiceTest {
                 eq(UserAuditAction.USER_ANONYMIZED), eq(5L), eq("ana@email.com"), contains("ana@email.com"));
     }
 
+    @Test
+    void shouldFilterUsersBySearchAndRoleThroughSpecification() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> filteredPage = new PageImpl<>(
+                List.of(user(5L, "Ana Lima", "ana@aluno.mapa.edu", Role.STUDENT)), pageable, 1);
+        when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(filteredPage);
+
+        PageResponseDTO<UserResponseDTO> result = userService.findAll("  ana@aluno ", Role.STUDENT, pageable);
+
+        assertEquals(1, result.totalElements());
+        assertEquals("ana@aluno.mapa.edu", result.content().get(0).email());
+        verify(userRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    void shouldListUsersWithoutFiltersKeepingDefaultBehavior() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> usersPage = new PageImpl<>(
+                List.of(user(1L, "Ana Lima", "ana@aluno.mapa.edu", Role.STUDENT)), pageable, 1);
+        when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(usersPage);
+
+        PageResponseDTO<UserResponseDTO> result = userService.findAll(pageable);
+
+        assertEquals(1, result.totalElements());
+    }
+
+    @Test
+    void shouldBlockDeactivatingLastActiveAdmin() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, 9L)).thenReturn(0L);
+
+        assertThrows(RoleNotAllowedException.class, () -> userService.update(9L,
+                new UserUpdateRequestDTO("Administrador", "admin@x.com", null, false)));
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(userAuditLogService, never()).recordByCurrentUser(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldAllowAdminToDeactivateAStudentAccount() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        User student = user(5L, "Ana Lima", "ana@aluno.mapa.edu", Role.STUDENT);
+        authenticateAs(admin);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(student));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponseDTO updatedUser = userService.update(5L,
+                new UserUpdateRequestDTO("Ana Lima", "ana@aluno.mapa.edu", null, false));
+
+        assertFalse(updatedUser.active());
+        assertFalse(student.isActive());
+        verify(userAuditLogService).recordByCurrentUser(
+                eq(UserAuditAction.USER_UPDATED), eq(5L), eq("ana@aluno.mapa.edu"), contains("active"));
+    }
+
     private User user(Long id, String fullName, String email, Role role) {
         return User.builder()
                 .id(id)
@@ -197,6 +271,41 @@ class UserServiceTest {
                 .role(role)
                 .active(true)
                 .build();
+    }
+
+    @Test
+    void shouldBlockDemotingLastActiveAdminBeforeMutatingAccount() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        assertThrows(RoleNotAllowedException.class, () -> userService.update(9L,
+                new UserUpdateRequestDTO("Administrador", "admin@x.com", Role.STUDENT, null)));
+        assertEquals(Role.ADMIN, admin.getRole());
+        verify(userRepository).findAdministratorsForUpdate(Role.ADMIN);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void shouldBlockCombinedDemotionAndDeactivationOfLastAdmin() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        assertThrows(RoleNotAllowedException.class, () -> userService.update(9L,
+                new UserUpdateRequestDTO("Administrador", "admin@x.com", Role.TEACHER, false)));
+        assertEquals(Role.ADMIN, admin.getRole());
+        assertEquals(true, admin.isActive());
+    }
+
+    @Test
+    void shouldAllowDemotionWhenAnotherActiveAdminExistsAndRevokeSessions() {
+        User admin = user(9L, "Administrador", "admin@x.com", Role.ADMIN);
+        authenticateAs(admin);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(admin));
+        when(userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, 9L)).thenReturn(1L);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        userService.update(9L, new UserUpdateRequestDTO("Administrador", "admin@x.com", Role.TEACHER, null));
+        assertEquals(Role.TEACHER, admin.getRole());
+        assertEquals(1, admin.getCredentialsVersion());
     }
 
     private void authenticateAs(User user) {

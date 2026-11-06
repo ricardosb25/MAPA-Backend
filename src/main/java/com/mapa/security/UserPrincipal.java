@@ -18,6 +18,7 @@ public class UserPrincipal implements UserDetails {
     private final String passwordHash;
     private final String role;
     private final boolean active;
+    private final long credentialsVersion;
 
     public UserPrincipal(User user) {
         this.id = user.getId();
@@ -26,6 +27,7 @@ public class UserPrincipal implements UserDetails {
         this.passwordHash = user.getPasswordHash();
         this.role = user.getRole().name();
         this.active = user.isActive();
+        this.credentialsVersion = user.getCredentialsVersion();
     }
 
     @Override

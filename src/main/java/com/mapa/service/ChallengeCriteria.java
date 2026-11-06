@@ -1,0 +1,50 @@
+package com.mapa.service;
+
+import com.mapa.domain.enums.EngineStatus;
+
+import java.util.List;
+
+public final class ChallengeCriteria {
+
+    private ChallengeCriteria() {
+    }
+
+    public static List<String> labels(int goalPowerCv, EngineStatus requiredEngineStatus) {
+        return List.of(
+                "Atingir " + goalPowerCv + " cv de pico",
+                "Status final: " + requiredStatus(requiredEngineStatus).getLabel());
+    }
+
+    public static int completedCount(
+            int goalPowerCv,
+            EngineStatus requiredEngineStatus,
+            Double lastPeakPower,
+            EngineStatus lastEngineStatus) {
+
+        return (int) results(goalPowerCv, requiredEngineStatus, lastPeakPower, lastEngineStatus)
+                .stream().filter(Boolean::booleanValue).count();
+    }
+
+    public static List<Boolean> results(int goalPowerCv, EngineStatus requiredEngineStatus,
+                                        Double lastPeakPower, EngineStatus lastEngineStatus) {
+        if (lastPeakPower == null || !Double.isFinite(lastPeakPower) || lastEngineStatus == null) {
+            return List.of(false, false);
+        }
+        return List.of(lastPeakPower >= goalPowerCv,
+                lastEngineStatus == requiredStatus(requiredEngineStatus));
+    }
+
+    public static boolean isCompleted(
+            int goalPowerCv,
+            EngineStatus requiredEngineStatus,
+            Double lastPeakPower,
+            EngineStatus lastEngineStatus) {
+
+        return completedCount(goalPowerCv, requiredEngineStatus, lastPeakPower, lastEngineStatus)
+                == labels(goalPowerCv, requiredEngineStatus).size();
+    }
+
+    private static EngineStatus requiredStatus(EngineStatus requiredEngineStatus) {
+        return requiredEngineStatus == null ? EngineStatus.INTEGRO : requiredEngineStatus;
+    }
+}

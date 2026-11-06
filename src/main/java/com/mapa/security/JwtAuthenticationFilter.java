@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import io.jsonwebtoken.JwtException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -27,17 +27,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jakarta.servlet.FilterChain filterChain) throws jakarta.servlet.ServletException, java.io.IOException {
         String token = extractToken(request);
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            if (jwtService.isTokenValid(token)) {
+            try {
                 String email = jwtService.extractEmail(token);
-                try {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                var userDetails = userDetailsService.loadUserByUsername(email);
+                if (userDetails instanceof UserPrincipal principal && jwtService.isTokenValid(token, principal)) {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                } catch (UsernameNotFoundException exception) {
-                  log.debug("Token apresentado para usuário inexistente: {}", email);
                 }
+            } catch (JwtException | IllegalArgumentException | UsernameNotFoundException exception) {
+                log.debug("Token rejeitado por validação ou usuário indisponível");
             }
         }
         filterChain.doFilter(request, response);

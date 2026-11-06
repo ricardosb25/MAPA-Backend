@@ -8,13 +8,17 @@ import com.mapa.dto.auth.UserResponseDTO;
 import com.mapa.dto.user.UserCreateRequestDTO;
 import com.mapa.dto.user.UserUpdateRequestDTO;
 import com.mapa.exception.EmailAlreadyExistsException;
+import com.mapa.exception.AccountSettingsException;
 import com.mapa.exception.InvalidCredentialsException;
 import com.mapa.exception.ResourceNotFoundException;
 import com.mapa.exception.RoleNotAllowedException;
 import com.mapa.repository.UserRepository;
 import com.mapa.security.UserPrincipal;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,7 +45,13 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public PageResponseDTO<UserResponseDTO> findAll(Pageable pageable) {
-        return PageResponseDTO.fromPage(userRepository.findAll(pageable).map(UserResponseDTO::fromEntity));
+        return findAll(null, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponseDTO<UserResponseDTO> findAll(String search, Role role, Pageable pageable) {
+        Page<User> usersPage = userRepository.findAll(buildFilters(search, role), pageable);
+        return PageResponseDTO.fromPage(usersPage.map(UserResponseDTO::fromEntity));
     }
 
     @Transactional(readOnly = true)
@@ -80,16 +90,30 @@ public class UserService {
 
     @Transactional
     public UserResponseDTO update(Long userId, UserUpdateRequestDTO request) {
+        UserPrincipal principal = currentPrincipal();
+        if (isAdmin(principal) && (request.role() != null || request.active() != null)) {
+            userRepository.findAdministratorsForUpdate(Role.ADMIN);
+        }
         User user = findEntityById(userId);
-        UserPrincipal principal = requireAdminOrSelf(user);
+        requireAdminOrSelf(user);
+
+        requireActiveAdministratorRetained(user,
+                request.role() == null ? user.getRole() : request.role(),
+                request.active() == null ? user.isActive() : request.active());
 
         List<String> changes = new ArrayList<>();
+        boolean credentialsChanged = false;
 
         String normalizedEmail = normalizeEmail(request.email());
         if (!normalizedEmail.equals(user.getEmail())) {
+            if (Objects.equals(principal.getId(), user.getId())) {
+                throw new AccountSettingsException(
+                        "Use as configurações da conta para alterar seu e-mail com a senha atual.");
+            }
             ensureEmailAvailable(normalizedEmail, user.getId());
             changes.add("email: '" + user.getEmail() + "' -> '" + normalizedEmail + "'");
             user.setEmail(normalizedEmail);
+            credentialsChanged = true;
         }
 
         String fullName = request.fullName().trim();
@@ -102,18 +126,27 @@ public class UserService {
             requireAdmin(principal, "perfil");
             changes.add("role: '" + user.getRole() + "' -> '" + request.role() + "'");
             user.setRole(request.role());
+            credentialsChanged = true;
         }
 
         if (request.active() != null && request.active() != user.isActive()) {
             requireAdmin(principal, "situação ativa");
             changes.add("active: '" + user.isActive() + "' -> '" + request.active() + "'");
             user.setActive(request.active());
+            if (!user.isActive()) {
+                user.setResetToken(null);
+                user.setResetTokenExpiresAt(null);
+            }
+            credentialsChanged = true;
         }
 
         if (changes.isEmpty()) {
             return UserResponseDTO.fromEntity(user);
         }
 
+        if (credentialsChanged) {
+            user.invalidateSessions();
+        }
         User updatedUser = userRepository.save(user);
         userAuditLogService.recordByCurrentUser(
                 UserAuditAction.USER_UPDATED,
@@ -125,14 +158,13 @@ public class UserService {
 
     @Transactional
     public void anonymize(Long userId) {
+        if (isAdmin(currentPrincipal())) {
+            userRepository.findAdministratorsForUpdate(Role.ADMIN);
+        }
         User user = findEntityById(userId);
         UserPrincipal principal = requireAdminOrSelf(user);
 
-        if (user.getRole() == Role.ADMIN && user.isActive()
-                && userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, user.getId()) == 0) {
-            throw new RoleNotAllowedException(
-                    "Operação não permitida: é necessário manter ao menos um administrador ativo");
-        }
+        requireActiveAdministratorRetained(user, user.getRole(), false);
 
         String originalEmail = user.getEmail();
         user.setFullName(ANONYMIZED_FULL_NAME);
@@ -141,6 +173,7 @@ public class UserService {
         user.setResetToken(null);
         user.setResetTokenExpiresAt(null);
         user.setActive(false);
+        user.invalidateSessions();
         userRepository.save(user);
 
         userAuditLogService.recordByCurrentUser(
@@ -155,9 +188,38 @@ public class UserService {
         return "anonimizado-" + userId + ANONYMIZED_EMAIL_DOMAIN;
     }
 
+    private void requireActiveAdministratorRetained(User user, Role nextRole, boolean nextActive) {
+        if (user.getRole() == Role.ADMIN && user.isActive()
+                && (nextRole != Role.ADMIN || !nextActive)
+                && userRepository.countByRoleAndActiveTrueAndIdNot(Role.ADMIN, user.getId()) == 0) {
+            throw new RoleNotAllowedException(
+                    "Operação não permitida: é necessário manter ao menos um administrador ativo");
+        }
+    }
+
     private User findEntityById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com id: " + userId));
+    }
+
+    private Specification<User> buildFilters(String search, Role role) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (role != null) {
+                predicates.add(criteriaBuilder.equal(root.get("role"), role));
+            }
+
+            String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+            if (!normalizedSearch.isEmpty()) {
+                String pattern = "%" + normalizedSearch + "%";
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), pattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), pattern)));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     private UserPrincipal requireAdminOrSelf(User target) {
