@@ -9,18 +9,22 @@ import com.mapa.domain.User;
 import com.mapa.domain.enums.ChallengeDifficulty;
 import com.mapa.domain.enums.EngineStatus;
 import com.mapa.domain.enums.Role;
+import com.mapa.dto.challenge.ChallengeRequestDTO;
 import com.mapa.repository.ChallengeProgressRepository;
 import com.mapa.repository.ChallengeRepository;
 import com.mapa.repository.ClassEnrollmentRepository;
 import com.mapa.repository.MotorRepository;
 import com.mapa.repository.SchoolClassRepository;
 import com.mapa.repository.UserRepository;
+import com.mapa.security.UserPrincipal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Optional;
 
@@ -81,6 +85,7 @@ class ChallengeServiceTest {
                 .build();
 
         when(challengeProgressRepository.findByStudentIdAndSelectedIsTrue(5L)).thenReturn(Optional.of(progress));
+        when(classEnrollmentRepository.existsBySchoolClassIdAndStudentId(4L, 5L)).thenReturn(true);
         when(challengeProgressRepository.save(progress)).thenReturn(progress);
 
         challengeService.registerSimulationAttempts(student, motor, dynamometerTest(110.0, EngineStatus.INTEGRO));
@@ -91,6 +96,51 @@ class ChallengeServiceTest {
         assertTrue(savedProgress.getValue().isCompleted());
         assertEquals(110.0, savedProgress.getValue().getLastPeakPower());
         assertEquals(EngineStatus.INTEGRO, savedProgress.getValue().getLastEngineStatus());
+    }
+
+    @Test
+    void shouldIgnoreSimulationWhenStudentIsNoLongerEnrolled() {
+        User student = student();
+        Motor motor = motor();
+        ChallengeProgress progress = ChallengeProgress.builder()
+                .challenge(challenge(motor))
+                .student(student)
+                .selected(true)
+                .build();
+        when(challengeProgressRepository.findByStudentIdAndSelectedIsTrue(5L)).thenReturn(Optional.of(progress));
+        when(classEnrollmentRepository.existsBySchoolClassIdAndStudentId(4L, 5L)).thenReturn(false);
+
+        challengeService.registerSimulationAttempts(student, motor, dynamometerTest(131.5, EngineStatus.INTEGRO));
+
+        assertEquals(0, progress.getAttempts());
+        verify(challengeProgressRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void shouldResetProgressOnlyWhenChallengeRequirementsChange() {
+        Motor motor = motor();
+        Challenge challenge = challenge(motor);
+        SchoolClass schoolClass = challenge.getSchoolClass();
+        schoolClass.setTeacher(challenge.getTeacher());
+        UserPrincipal principal = new UserPrincipal(challenge.getTeacher());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+        when(challengeRepository.findById(3L)).thenReturn(Optional.of(challenge));
+        when(schoolClassRepository.findById(4L)).thenReturn(Optional.of(schoolClass));
+        when(motorRepository.findById(motor.getId())).thenReturn(Optional.of(motor));
+        when(challengeRepository.save(challenge)).thenReturn(challenge);
+
+        try {
+            challengeService.update(3L, new ChallengeRequestDTO("Título editado", "Descrição",
+                    ChallengeDifficulty.MEDIUM, motor.getId(), 4L, 103, EngineStatus.INTEGRO));
+            verify(challengeProgressRepository, never()).deleteByChallengeId(3L);
+
+            challengeService.update(3L, new ChallengeRequestDTO("Título editado", "Descrição",
+                    ChallengeDifficulty.MEDIUM, motor.getId(), 4L, 120, EngineStatus.INTEGRO));
+            verify(challengeProgressRepository).deleteByChallengeId(3L);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

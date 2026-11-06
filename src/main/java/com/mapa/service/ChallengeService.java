@@ -159,8 +159,17 @@ public class ChallengeService {
         Challenge challenge = findEntityById(challengeId);
         requireOwnChallenge(challenge);
 
-        challenge.setSchoolClass(findOwnedClass(request.classId(), currentPrincipal().getId()));
-        challenge.setMotor(findMotor(request.motorId()));
+        SchoolClass schoolClass = findOwnedClass(request.classId(), currentPrincipal().getId());
+        Motor motor = findMotor(request.motorId());
+        boolean requirementsChanged = !Objects.equals(challenge.getSchoolClass().getId(), schoolClass.getId())
+                || !Objects.equals(challenge.getMotor().getId(), motor.getId())
+                || !Objects.equals(challenge.getGoalPowerCv(), request.goalPowerCv())
+                || challenge.getRequiredEngineStatus() != request.requiredEngineStatus();
+        if (requirementsChanged) {
+            challengeProgressRepository.deleteByChallengeId(challengeId);
+        }
+        challenge.setSchoolClass(schoolClass);
+        challenge.setMotor(motor);
         request.applyTo(challenge);
 
         Challenge updatedChallenge = challengeRepository.save(challenge);
@@ -247,7 +256,9 @@ public class ChallengeService {
 
         ChallengeProgress progress = selectedProgress.get();
         Challenge challenge = progress.getChallenge();
-        if (!Objects.equals(challenge.getMotor().getId(), motor.getId())) {
+        if (!Objects.equals(challenge.getMotor().getId(), motor.getId())
+                || !classEnrollmentRepository.existsBySchoolClassIdAndStudentId(
+                        challenge.getSchoolClass().getId(), user.getId())) {
             return;
         }
 

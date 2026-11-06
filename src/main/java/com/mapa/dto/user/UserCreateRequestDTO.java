@@ -1,5 +1,7 @@
 package com.mapa.dto.user;
 
+import com.mapa.validation.BcryptPassword;
+
 import com.mapa.domain.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -18,7 +20,8 @@ public record UserCreateRequestDTO(
         String email,
 
         @NotBlank(message = "Senha é obrigatória")
-        @Size(min = 8, max = 100, message = "Senha deve ter entre 8 e 100 caracteres")
+        @Size(min = 8, message = "Senha deve ter no mínimo 8 caracteres")
+        @BcryptPassword
         String password,
 
         @NotNull(message = "Perfil é obrigatório")

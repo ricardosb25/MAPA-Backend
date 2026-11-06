@@ -134,6 +134,7 @@ public class AuthService {
     @Transactional
     public MessageResponseDTO resetPassword(ResetPasswordRequestDTO request) {
         User user = userRepository.findByResetTokenForUpdate(request.token())
+                .filter(User::isActive)
                 .filter(candidate -> candidate.getResetTokenExpiresAt() != null
                         && candidate.getResetTokenExpiresAt().isAfter(OffsetDateTime.now()))
                 .orElseThrow(InvalidResetTokenException::new);

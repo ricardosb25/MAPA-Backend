@@ -133,6 +133,10 @@ public class UserService {
             requireAdmin(principal, "situação ativa");
             changes.add("active: '" + user.isActive() + "' -> '" + request.active() + "'");
             user.setActive(request.active());
+            if (!user.isActive()) {
+                user.setResetToken(null);
+                user.setResetTokenExpiresAt(null);
+            }
             credentialsChanged = true;
         }
 
