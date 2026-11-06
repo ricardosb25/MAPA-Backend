@@ -31,6 +31,7 @@ public record ChallengeResponseDTO(
         boolean completed,
         int completedCriteria,
         List<String> criteria,
+        List<Boolean> criteriaResults,
         long completedStudents,
         long enrolledStudents
 ) {
@@ -72,6 +73,9 @@ public record ChallengeResponseDTO(
                 progress != null && progress.isCompleted(),
                 completedCriteria,
                 criteria,
+                ChallengeCriteria.results(challenge.getGoalPowerCv(), requiredEngineStatus,
+                        progress == null ? null : progress.getLastPeakPower(),
+                        progress == null ? null : progress.getLastEngineStatus()),
                 completedStudents,
                 enrolledStudents);
     }

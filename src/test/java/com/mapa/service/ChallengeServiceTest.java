@@ -59,6 +59,28 @@ class ChallengeServiceTest {
     private ChallengeService challengeService;
 
     @Test
+    void shouldNotComplete255CvChallengeWith98CvAndIntactEngine() {
+        User student = student();
+        Motor motor = motor();
+        Challenge challenge = challenge(motor);
+        challenge.setGoalPowerCv(255);
+        ChallengeProgress progress = ChallengeProgress.builder().challenge(challenge)
+                .student(student).selected(true).build();
+        when(challengeProgressRepository.findByStudentIdAndSelectedIsTrue(5L)).thenReturn(Optional.of(progress));
+        when(classEnrollmentRepository.existsBySchoolClassIdAndStudentId(4L, 5L)).thenReturn(true);
+
+        challengeService.registerSimulationAttempts(student, motor, dynamometerTest(98.0, EngineStatus.INTEGRO));
+
+        org.junit.jupiter.api.Assertions.assertFalse(progress.isCompleted());
+        org.junit.jupiter.api.Assertions.assertNull(progress.getCompletedAt());
+        var response = com.mapa.dto.challenge.ChallengeResponseDTO.fromEntity(challenge, progress, 0, 1);
+        assertEquals(java.util.List.of(false, true), response.criteriaResults());
+        assertEquals(1, response.completedCriteria());
+        org.junit.jupiter.api.Assertions.assertFalse(response.completed());
+        verify(challengeProgressRepository).save(progress);
+    }
+
+    @Test
     void shouldIgnoreSimulationWhenStudentHasNoSelectedChallenge() {
         User student = student();
         Motor motor = motor();

@@ -21,18 +21,17 @@ public final class ChallengeCriteria {
             Double lastPeakPower,
             EngineStatus lastEngineStatus) {
 
-        if (lastPeakPower == null || lastEngineStatus == null) {
-            return 0;
-        }
+        return (int) results(goalPowerCv, requiredEngineStatus, lastPeakPower, lastEngineStatus)
+                .stream().filter(Boolean::booleanValue).count();
+    }
 
-        int completedCriteria = 0;
-        if (lastPeakPower >= goalPowerCv) {
-            completedCriteria++;
+    public static List<Boolean> results(int goalPowerCv, EngineStatus requiredEngineStatus,
+                                        Double lastPeakPower, EngineStatus lastEngineStatus) {
+        if (lastPeakPower == null || !Double.isFinite(lastPeakPower) || lastEngineStatus == null) {
+            return List.of(false, false);
         }
-        if (lastEngineStatus == requiredStatus(requiredEngineStatus)) {
-            completedCriteria++;
-        }
-        return completedCriteria;
+        return List.of(lastPeakPower >= goalPowerCv,
+                lastEngineStatus == requiredStatus(requiredEngineStatus));
     }
 
     public static boolean isCompleted(
