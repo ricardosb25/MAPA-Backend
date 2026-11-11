@@ -10,7 +10,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class UserSessionMigrationTest {
+class UserSessionMigrationIntegrationTest {
     @Test
     void shouldInitializeExistingAccountsWithoutResettingSessionVersions() {
         var dataSource = new DriverManagerDataSource(
