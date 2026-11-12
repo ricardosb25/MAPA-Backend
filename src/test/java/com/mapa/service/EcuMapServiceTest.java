@@ -110,6 +110,44 @@ class EcuMapServiceTest {
     }
 
     @Test
+    void shouldProjectLegacyTuningAndPreserveValuesAboveTheCutoffWhenEditing() {
+        authenticateAs(user(5L, Role.STUDENT));
+        Motor motor = aspiratedMotor();
+        motor.setRpmCutoff(6600);
+        EcuMapDefault factory = factoryMap(EcuMapType.FUEL);
+        List<Integer> legacyRow = List.of(50, 60, 65, 70, 75, 80, 90, 95);
+        EcuMapTuning tuning = EcuMapTuning.builder()
+                .tunedValues(java.util.Collections.nCopies(factory.getLoadBreakpoints().size(), legacyRow))
+                .build();
+        when(motorRepository.findById(1L)).thenReturn(Optional.of(motor));
+        when(ecuMapDefaultRepository.findByDisplacementClassAndMapType(any(), any()))
+                .thenAnswer(invocation -> Optional.of(factoryMap(invocation.getArgument(1))));
+        when(ecuMapTuningRepository.findByUserIdAndMotorIdAndMapType(5L, 1L, EcuMapType.FUEL))
+                .thenReturn(Optional.of(tuning));
+        when(ecuMapTuningRepository.findByUserIdAndMotorIdAndMapType(5L, 1L, EcuMapType.IGNITION))
+                .thenReturn(Optional.empty());
+        when(ecuMapTuningRepository.save(tuning)).thenReturn(tuning);
+
+        List<EcuMapResponseDTO> maps = ecuMapService.findMapsByMotor(1L);
+        List<Integer> expectedRpm = List.of(1000, 2000, 3000, 4000, 5000, 6000, 6600);
+        assertTrue(maps.stream().allMatch(map -> map.rpmBreakpoints().equals(expectedRpm)));
+        EcuMapResponseDTO fuelMap = maps.stream().filter(map -> map.mapType().equals("FUEL")).findFirst().orElseThrow();
+        assertEquals(86, fuelMap.values().getFirst().getLast());
+
+        EcuMapResponseDTO updated = ecuMapService.updateCell(
+                1L, EcuMapType.FUEL, new EcuMapCellUpdateRequestDTO(0, 6, 88));
+        assertEquals(88, updated.values().getFirst().getLast());
+        assertEquals(95, tuning.getTunedValues().getFirst().getLast());
+        assertEquals(8000, tuning.getRpmBreakpoints().getLast());
+
+        motor.setRpmCutoff(8100);
+        EcuMapResponseDTO extended = ecuMapService.findMapsByMotor(1L).stream()
+                .filter(map -> map.mapType().equals("FUEL")).findFirst().orElseThrow();
+        assertEquals(8100, extended.rpmBreakpoints().getLast());
+        assertEquals(95, extended.values().getFirst().getLast());
+    }
+
+    @Test
     void shouldRejectIgnitionValueAboveRealisticCeiling() {
         authenticateAs(user(5L, Role.STUDENT));
         when(motorRepository.findById(1L)).thenReturn(Optional.of(aspiratedMotor()));

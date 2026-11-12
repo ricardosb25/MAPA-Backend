@@ -16,6 +16,7 @@ public final class DynamometerPhysics {
     private static final double POWER_CONSTANT_KGFM = 716.2;
     private static final int RPM_STEP = 250;
     private static final int MIN_RPM = 1000;
+    private static final int CURVE_REFERENCE_RPM = 8000;
 
     private static final double AIR_VE_BASE = 76.0;
     private static final double AIR_VE_CURVATURE = 1.75;
@@ -87,13 +88,13 @@ public final class DynamometerPhysics {
         EngineStatus finalStatus = EngineStatus.INTEGRO;
         int lastRpm = Math.max(input.rpmCutoff(), startRpm);
 
-        for (int rpm = startRpm; rpm <= lastRpm; rpm += RPM_STEP) {
+        for (int rpm = startRpm; ; rpm = (int) Math.min((long) rpm + RPM_STEP, lastRpm)) {
             if (rpm > physicalRpmLimit) {
                 finalStatus = EngineStatus.OVERREV;
                 break;
             }
 
-            double airVolumetricEfficiency = airVolumetricEfficiency(rpm, input.rpmBreakpoints());
+            double airVolumetricEfficiency = airVolumetricEfficiency(rpm);
             double fuelVolumetricEfficiency = interpolate(
                     input.fuelGrid(), rpm, fullLoad, input.rpmBreakpoints(), input.loadBreakpoints());
             double advanceDegrees = interpolate(
@@ -109,7 +110,7 @@ public final class DynamometerPhysics {
             afrCurve.add(afr);
 
             finalStatus = checkEngineHealth(afr, advanceDegrees, rpm, fullLoad, input.compressionRatio());
-            if (finalStatus != EngineStatus.INTEGRO) {
+            if (finalStatus != EngineStatus.INTEGRO || rpm == lastRpm) {
                 break;
             }
         }
@@ -128,8 +129,8 @@ public final class DynamometerPhysics {
     /**
      * Eficiência volumétrica real do motor em função da rotação, com pico por volta de 60% da faixa útil.
      */
-    private static double airVolumetricEfficiency(int rpm, List<Integer> rpmBreakpoints) {
-        double rpmRatio = rpm / (double) rpmBreakpoints.get(rpmBreakpoints.size() - 1);
+    private static double airVolumetricEfficiency(int rpm) {
+        double rpmRatio = rpm / (double) CURVE_REFERENCE_RPM;
         double curve = 1.0 - AIR_VE_CURVATURE * Math.pow(rpmRatio - AIR_VE_PEAK_RATIO, 2);
         return AIR_VE_BASE * Math.max(AIR_VE_FLOOR_RATIO, curve);
     }
@@ -151,7 +152,7 @@ public final class DynamometerPhysics {
         double combustionEfficiency = combustionEfficiency(
                 advanceDegrees, mbtAdvanceDegrees(input.compressionRatio(), rpm));
         double frictionFactor = 1.0
-                - HIGH_RPM_FRICTION_FACTOR * highRpmFrictionRatio(rpm, input.rpmBreakpoints());
+                - HIGH_RPM_FRICTION_FACTOR * highRpmFrictionRatio(rpm);
 
         return airMassGrams * TORQUE_PER_GRAM_AIR * combustionEfficiency * frictionFactor;
     }
@@ -205,8 +206,8 @@ public final class DynamometerPhysics {
     /**
      * Perda de torque por atritos e bombeamento em altas rotações.
      */
-    private static double highRpmFrictionRatio(int rpm, List<Integer> rpmBreakpoints) {
-        double rpmRatio = rpm / (double) rpmBreakpoints.get(rpmBreakpoints.size() - 1);
+    private static double highRpmFrictionRatio(int rpm) {
+        double rpmRatio = rpm / (double) CURVE_REFERENCE_RPM;
         double overRatio = (rpmRatio - HIGH_RPM_FRICTION_START_RATIO) / (1.0 - HIGH_RPM_FRICTION_START_RATIO);
         return Math.max(0.0, Math.min(1.0, overRatio));
     }
@@ -253,8 +254,9 @@ public final class DynamometerPhysics {
     }
 
     private static double lerp(List<List<Integer>> grid, int rpmSegment, int loadRow, double rpmFraction) {
-        double startValue = grid.get(loadRow).get(rpmSegment);
-        double endValue = grid.get(loadRow).get(rpmSegment + 1);
+        List<Integer> row = grid.get(loadRow);
+        double startValue = row.get(rpmSegment);
+        double endValue = row.get(Math.min(rpmSegment + 1, row.size() - 1));
         return startValue + (endValue - startValue) * rpmFraction;
     }
 
@@ -271,7 +273,7 @@ public final class DynamometerPhysics {
 
     private static double segmentFraction(List<Integer> breakpoints, int segment, double value) {
         double start = breakpoints.get(segment);
-        double end = breakpoints.get(segment + 1);
+        double end = breakpoints.get(Math.min(segment + 1, breakpoints.size() - 1));
         if (start == end) {
             return 0.0;
         }

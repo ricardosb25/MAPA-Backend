@@ -21,10 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,20 +45,25 @@ public class EcuMapService {
     @Transactional
     public EcuMapResponseDTO updateCell(Long engineId, EcuMapType mapType, EcuMapCellUpdateRequestDTO cellUpdate) {
         Motor motor = findMotor(engineId);
-        EcuMapSpec spec = EcuMapSpec.forMotor(motor, mapType);
+        EcuMapSpec factorySpec = EcuMapSpec.forMotor(motor, mapType);
+        EcuMapSpec spec = factorySpec.withRpmCutoff(motor.getRpmCutoff());
         validateCell(spec, cellUpdate);
 
         Long userId = currentPrincipal().getId();
-        EcuMapDefault ecuMapDefault = ensureDefaultMap(motor, spec);
+        EcuMapDefault ecuMapDefault = ensureDefaultMap(motor, factorySpec);
         EcuMapTuning tuning = ecuMapTuningRepository
                 .findByUserIdAndMotorIdAndMapType(userId, motor.getId(), mapType)
-                .orElseGet(() -> newTuning(userId, motor, spec, ecuMapDefault));
-
-        tuning.setTunedValues(
-                replaceCell(tuning.getTunedValues(), cellUpdate.loadIndex(), cellUpdate.rpmIndex(), cellUpdate.value()));
+                .orElseGet(() -> EcuMapTuning.builder()
+                        .userId(userId).motorId(motor.getId()).mapType(mapType).build());
+        EcuMapRpmGrid factoryGrid = EcuMapRpmGrid.factory(ecuMapDefault);
+        EcuMapRpmGrid sourceGrid = tuning.getTunedValues() == null ? factoryGrid : factoryGrid.withTuning(tuning);
+        EcuMapRpmGrid updatedGrid = sourceGrid.editCell(
+                cellUpdate.loadIndex(), spec.rpmBreakpoints().get(cellUpdate.rpmIndex()), cellUpdate.value());
+        tuning.setRpmBreakpoints(updatedGrid.rpmBreakpoints());
+        tuning.setTunedValues(updatedGrid.values());
         tuning.setUpdatedAt(OffsetDateTime.now());
 
-        return buildResponse(motor, mapType, userId, ecuMapDefault, ecuMapTuningRepository.save(tuning));
+        return buildResponse(motor, spec, ecuMapDefault, ecuMapTuningRepository.save(tuning));
     }
 
     @Transactional
@@ -91,36 +94,31 @@ public class EcuMapService {
                 .findByUserIdAndMotorIdAndMapType(userId, motor.getId(), mapType)
                 .orElse(null);
 
-        if (tuning != null && !hasSameShape(tuning, spec)) {
-            ecuMapTuningRepository.delete(tuning);
-            tuning = null;
-        }
-
-        return buildResponse(motor, mapType, userId, ecuMapDefault, tuning);
+        return buildResponse(motor, spec.withRpmCutoff(motor.getRpmCutoff()), ecuMapDefault, tuning);
     }
 
     private EcuMapResponseDTO buildResponse(
-            Motor motor, EcuMapType mapType, Long userId, EcuMapDefault ecuMapDefault, EcuMapTuning tuning) {
-        EcuMapSpec spec = EcuMapSpec.forMotor(motor, mapType);
-        List<List<Integer>> effectiveValues = tuning != null
-                ? tuning.getTunedValues()
-                : ecuMapDefault.getFactoryValues();
+            Motor motor, EcuMapSpec spec, EcuMapDefault ecuMapDefault, EcuMapTuning tuning) {
+        EcuMapRpmGrid factoryGrid = EcuMapRpmGrid.factory(ecuMapDefault);
+        EcuMapRpmGrid effectiveGrid = factoryGrid.withTuning(tuning);
+        List<List<Integer>> factoryValues = factoryGrid.valuesAt(spec.rpmBreakpoints());
+        boolean factoryDefault = effectiveGrid == factoryGrid;
 
         return new EcuMapResponseDTO(
                 motor.getId(),
                 resolveDisplacementClass(motor),
-                mapType.name(),
+                spec.mapType().name(),
                 spec.label(),
                 spec.unit(),
                 spec.rpmBreakpoints(),
                 spec.loadBreakpoints(),
-                effectiveValues,
-                ecuMapDefault.getFactoryValues(),
+                factoryDefault ? factoryValues : effectiveGrid.valuesAt(spec.rpmBreakpoints()),
+                factoryValues,
                 spec.minValue(),
                 spec.maxValue(),
                 spec.step(),
-                tuning == null,
-                tuning == null ? null : tuning.getUpdatedAt());
+                factoryDefault,
+                factoryDefault ? null : tuning.getUpdatedAt());
     }
 
     private EcuMapDefault ensureDefaultMap(Motor motor, EcuMapSpec spec) {
@@ -144,15 +142,6 @@ public class EcuMapService {
         return EcuMapSpec.resolveDisplacementClass(motor.getDisplacementLiters());
     }
 
-    private EcuMapTuning newTuning(Long userId, Motor motor, EcuMapSpec spec, EcuMapDefault ecuMapDefault) {
-        return EcuMapTuning.builder()
-                .userId(userId)
-                .motorId(motor.getId())
-                .mapType(spec.mapType())
-                .tunedValues(copyOf(ecuMapDefault.getFactoryValues()))
-                .build();
-    }
-
     private void validateCell(EcuMapSpec spec, EcuMapCellUpdateRequestDTO cellUpdate) {
         if (!spec.isValidLoadIndex(cellUpdate.loadIndex())) {
             throw new InvalidEcuMapValueException("Índice de carga inválido para o " + spec.label().toLowerCase());
@@ -171,32 +160,6 @@ public class EcuMapService {
                     spec.maxValue(),
                     spec.step()));
         }
-    }
-
-    private List<List<Integer>> replaceCell(
-            List<List<Integer>> currentValues, int loadIndex, int rpmIndex, int value) {
-        List<List<Integer>> updatedValues = copyOf(currentValues);
-        List<Integer> updatedRow = new ArrayList<>(updatedValues.get(loadIndex));
-        updatedRow.set(rpmIndex, value);
-        updatedValues.set(loadIndex, updatedRow);
-        return updatedValues;
-    }
-
-    private boolean hasSameShape(EcuMapTuning tuning, EcuMapSpec spec) {
-        if (tuning.getTunedValues().size() != spec.loadBreakpoints().size()) {
-            return false;
-        }
-
-        return tuning.getTunedValues().stream()
-                .allMatch(row -> row.size() == spec.rpmBreakpoints().size());
-    }
-
-    private List<List<Integer>> copyOf(List<List<Integer>> values) {
-        List<List<Integer>> copy = new ArrayList<>(values.size());
-        for (List<Integer> row : values) {
-            copy.add(new ArrayList<>(row));
-        }
-        return copy;
     }
 
     private Motor findMotor(Long engineId) {

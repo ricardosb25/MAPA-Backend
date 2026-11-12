@@ -43,18 +43,20 @@ public class DynamometerPhysicsService {
         Motor motor = findActiveMotor(user);
         Long userId = user.getId();
 
-        EffectiveMap fuelMap = effectiveMap(userId, motor, EcuMapType.FUEL);
-        EffectiveMap ignitionMap = effectiveMap(userId, motor, EcuMapType.IGNITION);
+        EcuMapSpec fuelSpec = EcuMapSpec.forMotor(motor, EcuMapType.FUEL).withRpmCutoff(motor.getRpmCutoff());
+        List<Integer> rpmBreakpoints = fuelSpec.rpmBreakpoints();
+        List<List<Integer>> fuelMap = effectiveMap(userId, motor, EcuMapType.FUEL, rpmBreakpoints);
+        List<List<Integer>> ignitionMap = effectiveMap(userId, motor, EcuMapType.IGNITION, rpmBreakpoints);
 
         DynamometerPhysics.SimulationInput input = new DynamometerPhysics.SimulationInput(
                 motor.getDisplacementLiters().doubleValue(),
                 motor.getCompressionRatio().doubleValue(),
                 motor.getRpmCutoff(),
                 EcuMapSpec.isForcedInduction(motor),
-                fuelMap.rpmBreakpoints(),
-                fuelMap.loadBreakpoints(),
-                fuelMap.values(),
-                ignitionMap.values());
+                rpmBreakpoints,
+                fuelSpec.loadBreakpoints(),
+                fuelMap,
+                ignitionMap);
 
         DynamometerPhysics.SimulationResult result = DynamometerPhysics.run(input);
 
@@ -87,13 +89,7 @@ public class DynamometerPhysicsService {
                 .toList();
     }
 
-    private record EffectiveMap(
-            List<Integer> rpmBreakpoints,
-            List<Integer> loadBreakpoints,
-            List<List<Integer>> values) {
-    }
-
-    private EffectiveMap effectiveMap(Long userId, Motor motor, EcuMapType mapType) {
+    private List<List<Integer>> effectiveMap(Long userId, Motor motor, EcuMapType mapType, List<Integer> rpmBreakpoints) {
         EcuMapSpec spec = EcuMapSpec.forMotor(motor, mapType);
         BigDecimal displacementClass = EcuMapSpec.resolveDisplacementClass(motor.getDisplacementLiters());
 
@@ -101,12 +97,11 @@ public class DynamometerPhysicsService {
                 .findByDisplacementClassAndMapType(displacementClass, mapType)
                 .orElseGet(() -> ecuMapDefaultRepository.save(newDefaultMap(displacementClass, spec)));
 
-        List<List<Integer>> effectiveValues = ecuMapTuningRepository
+        EcuMapTuning tuning = ecuMapTuningRepository
                 .findByUserIdAndMotorIdAndMapType(userId, motor.getId(), mapType)
-                .map(EcuMapTuning::getTunedValues)
-                .orElse(defaultMap.getFactoryValues());
+                .orElse(null);
 
-        return new EffectiveMap(defaultMap.getRpmBreakpoints(), defaultMap.getLoadBreakpoints(), effectiveValues);
+        return EcuMapRpmGrid.factory(defaultMap).withTuning(tuning).valuesAt(rpmBreakpoints);
     }
 
     private EcuMapDefault newDefaultMap(BigDecimal displacementClass, EcuMapSpec spec) {

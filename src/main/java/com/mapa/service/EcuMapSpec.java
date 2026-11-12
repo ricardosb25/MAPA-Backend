@@ -4,6 +4,7 @@ import com.mapa.domain.Motor;
 import com.mapa.domain.enums.EcuMapType;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -66,6 +67,13 @@ public record EcuMapSpec(
                     GENERIC_RPM_BREAKPOINTS,
                     LOAD_BREAKPOINTS);
         };
+    }
+
+    public EcuMapSpec withRpmCutoff(int rpmCutoff) {
+        List<Integer> points = new ArrayList<>();
+        rpmBreakpoints.stream().filter(rpm -> rpm < rpmCutoff).forEach(points::add);
+        points.add(rpmCutoff);
+        return new EcuMapSpec(mapType, label, unit, minValue, maxValue, step, List.copyOf(points), loadBreakpoints);
     }
 
     /**

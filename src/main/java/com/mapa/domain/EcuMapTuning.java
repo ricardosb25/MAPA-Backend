@@ -1,6 +1,7 @@
 package com.mapa.domain;
 
 import com.mapa.domain.converters.IntegerMatrixConverter;
+import com.mapa.domain.converters.IntegerListConverter;
 import com.mapa.domain.enums.EcuMapType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -49,6 +50,10 @@ public class EcuMapTuning {
     @Enumerated(EnumType.STRING)
     @Column(name = "map_type", nullable = false, length = 20)
     private EcuMapType mapType;
+
+    @Convert(converter = IntegerListConverter.class)
+    @Column(name = "rpm_breakpoints", length = 2000)
+    private List<Integer> rpmBreakpoints;
 
     @Convert(converter = IntegerMatrixConverter.class)
     @Column(name = "tuned_values", nullable = false, length = 4000)
