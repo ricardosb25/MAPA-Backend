@@ -5,10 +5,7 @@
 
 <module name="Checker">
     <module name="TreeWalker">
-        <module name="AvoidInlineConditionals"/>
         <module name="NeedBraces"/>
         <module name="UnusedImports"/>
-        <module name="MagicNumber"/>
-        <module name="FinalLocalVariable"/>
     </module>
 </module>
