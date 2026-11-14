@@ -44,7 +44,7 @@ VALUES
 ),
 (
     'RENAULT', 'C3G 720 1.2 8V',
-    'Clio 1.2 aspirado com injecao monoponto. Limite didatico do simulador: 6.000 RPM.',
+    'Twingo 1.2 aspirado com injecao monoponto. Limite didatico do simulador: 6.000 RPM.',
     1.2, 1239, 9.2, 6000,
     'ASPIRADO', CURRENT_TIMESTAMP
 ),

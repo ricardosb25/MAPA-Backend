@@ -15,20 +15,7 @@ DECLARE
     power_value numeric;
     goal_reached boolean;
     tested_time timestamptz;
-    audit_action_check text;
 BEGIN
-    SELECT pg_get_expr(conbin, conrelid) INTO audit_action_check
-    FROM pg_constraint
-    WHERE conrelid = 'user_audit_logs'::regclass AND conname = 'user_audit_logs_action_check';
-
-    IF audit_action_check IS NOT NULL AND strpos(audit_action_check, 'PRESENTATION_MODE_ENABLED') = 0 THEN
-        ALTER TABLE user_audit_logs DROP CONSTRAINT user_audit_logs_action_check;
-        EXECUTE format(
-            'ALTER TABLE user_audit_logs ADD CONSTRAINT user_audit_logs_action_check CHECK ((%s) OR action IN (%L, %L))',
-            audit_action_check, 'PRESENTATION_MODE_ENABLED', 'PRESENTATION_MODE_DISABLED'
-        );
-    END IF;
-
     SELECT record_id INTO STRICT teacher_id_value FROM presentation_data WHERE record_type = 'TEACHER';
     SELECT id INTO STRICT motor_id_value FROM motors
         ORDER BY (manufacturer = 'HONDA' AND name = 'K20A2 2.0 VTEC') DESC, id
