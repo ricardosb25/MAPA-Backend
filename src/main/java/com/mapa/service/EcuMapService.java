@@ -33,6 +33,7 @@ public class EcuMapService {
     private final EcuMapTuningRepository ecuMapTuningRepository;
 
     @Transactional
+    // Entrega os mapas personalizados até o corte do motor.
     public List<EcuMapResponseDTO> findMapsByMotor(Long engineId) {
         Motor motor = findMotor(engineId);
         Long userId = currentPrincipal().getId();
@@ -43,6 +44,7 @@ public class EcuMapService {
     }
 
     @Transactional
+    // Converte o índice da coluna em RPM antes de gravar o ajuste individual.
     public EcuMapResponseDTO updateCell(Long engineId, EcuMapType mapType, EcuMapCellUpdateRequestDTO cellUpdate) {
         Motor motor = findMotor(engineId);
         EcuMapSpec factorySpec = EcuMapSpec.forMotor(motor, mapType);
@@ -67,6 +69,7 @@ public class EcuMapService {
     }
 
     @Transactional
+    // Remove o ajuste individual para voltar ao mapa padrão.
     public EcuMapResponseDTO restoreFactoryMap(Long engineId, EcuMapType mapType) {
         Motor motor = findMotor(engineId);
         Long userId = currentPrincipal().getId();

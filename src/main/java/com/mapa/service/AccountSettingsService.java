@@ -37,6 +37,7 @@ public class AccountSettingsService {
     }
 
     @Transactional
+    // Confirma a senha atual e o intervalo de alteração antes de trocar o e-mail.
     public void changeEmail(EmailChangeRequestDTO request) {
         User account = lockedAccount(request.currentPassword());
         String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
@@ -59,6 +60,7 @@ public class AccountSettingsService {
     }
 
     @Transactional
+    // Aplica o intervalo de alteração, atualiza a senha e revoga sessões anteriores.
     public void changePassword(PasswordChangeRequestDTO request) {
         User account = lockedAccount(request.currentPassword());
         requireAvailable(account.getPasswordChangedAt(), "senha");

@@ -23,6 +23,7 @@ public class BaseRestorationService {
     private final UserAuditLogService auditLogService;
 
     @Transactional
+    // Remove as referências aos motores antigos e repõe o catálogo padrão na mesma transação.
     public void restoreMotors() {
         requireAdmin();
         jdbcTemplate.update("DELETE FROM challenge_attempts");
@@ -40,6 +41,7 @@ public class BaseRestorationService {
     }
 
     @Transactional
+    // Remove os ajustes individuais e repõe os mapas de fábrica com o SQL padrão.
     public void restoreMaps() {
         requireAdmin();
         jdbcTemplate.update("DELETE FROM ecu_map_tunings");

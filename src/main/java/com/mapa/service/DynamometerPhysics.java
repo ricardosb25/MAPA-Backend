@@ -75,6 +75,7 @@ public final class DynamometerPhysics {
             double averageAfr) {
     }
 
+    // Simula a puxada em plena carga, por RPM, até o corte do motor ou a primeira falha.
     public static SimulationResult run(SimulationInput input) {
         int startRpm = input.rpmBreakpoints().get(0);
         double fullLoad = input.loadBreakpoints().get(0);
@@ -219,6 +220,7 @@ public final class DynamometerPhysics {
         return (int) Math.round(PHYSICAL_RPM_BASE - displacementLiters * PHYSICAL_RPM_DISPLACEMENT_FACTOR);
     }
 
+    // Em alta carga, verifica mistura pobre antes de testar o limite de detonação.
     private static EngineStatus checkEngineHealth(
             double afr, double advanceDegrees, int rpm, double loadPercent, double compressionRatio) {
 

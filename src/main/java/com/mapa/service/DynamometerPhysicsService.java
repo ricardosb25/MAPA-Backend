@@ -38,6 +38,7 @@ public class DynamometerPhysicsService {
     private final ChallengeService challengeService;
 
     @Transactional
+    // Reúne o motor ativo e os dois mapas, executa a puxada e registra o resultado e o progresso.
     public DynoResultDTO runSimulation() {
         User user = currentUser();
         Motor motor = findActiveMotor(user);

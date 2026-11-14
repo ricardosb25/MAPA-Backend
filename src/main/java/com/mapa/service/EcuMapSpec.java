@@ -69,6 +69,7 @@ public record EcuMapSpec(
         };
     }
 
+    // Mantém os pontos abaixo do corte e usa o RPM exato do corte como última coluna.
     public EcuMapSpec withRpmCutoff(int rpmCutoff) {
         List<Integer> points = new ArrayList<>();
         rpmBreakpoints.stream().filter(rpm -> rpm < rpmCutoff).forEach(points::add);
