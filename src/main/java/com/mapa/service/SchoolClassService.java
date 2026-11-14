@@ -148,6 +148,7 @@ public class SchoolClassService {
     }
 
     @Transactional
+    // Usa o código da turma para matricular o aluno autenticado.
     public ClassResponseDTO join(String codigo) {
         UserPrincipal principal = currentPrincipal();
         requireRole(principal, Role.STUDENT, "entrar em turmas");

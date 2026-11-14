@@ -77,6 +77,7 @@ public class MotorService {
     }
 
     @Transactional
+    // Salva o motor ativo usado pela calibração e pelo dinamômetro.
     public MotorResponseDTO selectMotor(Long engineId) {
         Motor motor = findEntityById(engineId);
 

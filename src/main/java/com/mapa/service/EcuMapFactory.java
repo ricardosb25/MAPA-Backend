@@ -30,6 +30,7 @@ public final class EcuMapFactory {
     private EcuMapFactory() {
     }
 
+    // Gera a matriz padrão por classe de cilindrada e tipo de mapa.
     public static List<List<Integer>> generate(BigDecimal displacementClass, EcuMapSpec spec) {
         return spec.mapType() == EcuMapType.IGNITION
                 ? generateIgnitionMap(displacementClass, spec)

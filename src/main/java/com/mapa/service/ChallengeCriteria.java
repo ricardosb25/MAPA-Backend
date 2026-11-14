@@ -25,6 +25,7 @@ public final class ChallengeCriteria {
                 .stream().filter(Boolean::booleanValue).count();
     }
 
+    // Devolve separadamente os critérios de potência mínima e estado final do motor.
     public static List<Boolean> results(int goalPowerCv, EngineStatus requiredEngineStatus,
                                         Double lastPeakPower, EngineStatus lastEngineStatus) {
         if (lastPeakPower == null || !Double.isFinite(lastPeakPower) || lastEngineStatus == null) {

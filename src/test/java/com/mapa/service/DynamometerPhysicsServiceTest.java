@@ -75,7 +75,9 @@ class DynamometerPhysicsServiceTest {
     void shouldRunSimulationWithActiveMotorAndFactoryMaps() {
         authenticateAs(user(5L, Role.STUDENT, 1L));
         when(userRepository.findById(5L)).thenReturn(Optional.of(user(5L, Role.STUDENT, 1L)));
-        when(motorRepository.findById(1L)).thenReturn(Optional.of(aspiratedMotor()));
+        Motor selectedMotor = aspiratedMotor();
+        selectedMotor.setRpmCutoff(6600);
+        when(motorRepository.findById(1L)).thenReturn(Optional.of(selectedMotor));
         when(ecuMapDefaultRepository.findByDisplacementClassAndMapType(any(), any()))
                 .thenAnswer(invocation -> Optional.of(factoryMap(invocation.getArgument(1))));
         when(dynamometerTestRepository.save(any(DynamometerTest.class)))
@@ -84,7 +86,8 @@ class DynamometerPhysicsServiceTest {
         DynoResultDTO result = dynamometerPhysicsService.runSimulation();
 
         assertEquals(EngineStatus.INTEGRO, result.finalStatus());
-        assertEquals(23, result.rpmAxis().size());
+        assertEquals(24, result.rpmAxis().size());
+        assertEquals(6600, result.rpmAxis().getLast());
         assertEquals(result.powerCurve().size(), result.torqueCurve().size());
 
         ArgumentCaptor<DynamometerTest> savedTest = ArgumentCaptor.forClass(DynamometerTest.class);

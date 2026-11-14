@@ -14,6 +14,8 @@ public enum UserAuditAction {
     PASSWORD_CHANGED("Senha alterada", UserAuditLogLevel.AVISO),
     MOTOR_BASE_RESTORED("Base de motores restaurada", UserAuditLogLevel.AVISO),
     ECU_MAP_BASE_RESTORED("Base de mapas restaurada", UserAuditLogLevel.AVISO),
+    PRESENTATION_MODE_ENABLED("Modo apresentação ativado", UserAuditLogLevel.AVISO),
+    PRESENTATION_MODE_DISABLED("Modo apresentação desativado", UserAuditLogLevel.AVISO),
     TERMS_ACCEPTED("Termos aceitos", UserAuditLogLevel.INFO);
 
     private final String label;

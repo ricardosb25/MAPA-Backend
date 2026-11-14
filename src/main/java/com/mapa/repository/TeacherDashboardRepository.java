@@ -15,6 +15,7 @@ import java.util.List;
 public class TeacherDashboardRepository {
     private final JdbcTemplate jdbcTemplate;
 
+    // Agrega as tentativas e conclusões das turmas do professor considerando os alunos matriculados.
     public List<ClassPerformanceDTO> findClassPerformance(Long teacherId) {
         return jdbcTemplate.query("""
                 WITH teacher_classes AS (

@@ -93,7 +93,7 @@ class UserAuditLogIntegrationTest {
         assertTrue(logsFor(registeredUser.id()).stream().anyMatch(entry ->
                 entry.getAction() == UserAuditAction.TERMS_ACCEPTED
                         && entry.getDetails() != null
-                        && entry.getDetails().contains("versão 1.0")));
+                        && entry.getDetails().contains("versão 2.0")));
     }
 
     @Test

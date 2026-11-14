@@ -128,7 +128,7 @@ class AuthIntegrationTest {
         authService.register(studentRequest(email));
 
         User registeredUser = userRepository.findByEmail(email).orElseThrow();
-        assertEquals("1.0", registeredUser.getTermsVersion());
+        assertEquals("2.0", registeredUser.getTermsVersion());
         assertNotNull(registeredUser.getTermsAcceptedAt());
     }
 

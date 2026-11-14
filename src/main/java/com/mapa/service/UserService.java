@@ -157,6 +157,7 @@ public class UserService {
     }
 
     @Transactional
+    // Substitui os dados cadastrais, revoga sessões e registra a operação na auditoria.
     public void anonymize(Long userId) {
         if (isAdmin(currentPrincipal())) {
             userRepository.findAdministratorsForUpdate(Role.ADMIN);

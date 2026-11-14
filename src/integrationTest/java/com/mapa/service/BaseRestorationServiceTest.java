@@ -84,7 +84,7 @@ class BaseRestorationServiceTest {
     @Test
     void shouldReplaceMotorsAndClearSelectionsAndTunings() {
         transactionTemplate.executeWithoutResult(transactionStatus -> restorationService.restoreMotors());
-        assertEquals(2, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors", Integer.class));
+        assertEquals(8, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors WHERE manufacturer = 'CUSTOM'", Integer.class));
         assertNull(jdbcTemplate.queryForObject("SELECT active_motor_id FROM users WHERE id = 1", Long.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ecu_map_tunings", Integer.class));
@@ -92,24 +92,39 @@ class BaseRestorationServiceTest {
     }
 
     @Test
-    void shouldNotDuplicateMotorsOnRepeatedRestoration() {
+    void shouldReapplySeedWithoutDuplicatesOnRepeatedRestoration() {
         transactionTemplate.executeWithoutResult(transactionStatus -> restorationService.restoreMotors());
+        jdbcTemplate.update("UPDATE motors SET rpm_cutoff = ? WHERE name = ?", 6000, "K20A2 2.0 VTEC");
+
         transactionTemplate.executeWithoutResult(transactionStatus -> restorationService.restoreMotors());
-        assertEquals(2, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors", Integer.class));
+
+        assertEquals(8, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors", Integer.class));
+        assertEquals(8100, jdbcTemplate.queryForObject(
+                "SELECT rpm_cutoff FROM motors WHERE name = ?", Integer.class, "K20A2 2.0 VTEC"));
     }
 
     @Test
-    void shouldLoadOnlyConfirmedMotorVariants() {
+    void shouldRestoreSelectedLearningCatalog() {
         transactionTemplate.executeWithoutResult(transactionStatus -> restorationService.restoreMotors());
+        assertEquals(5, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors WHERE aspiration_type = 'ASPIRADO'", Integer.class));
+        assertEquals(3, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors WHERE aspiration_type = 'TURBO'", Integer.class));
+        assertEquals(6800, jdbcTemplate.queryForObject(
+                "SELECT rpm_cutoff FROM motors WHERE name = ?", Integer.class, "ECOBOOST 2.3 MUSTANG"));
         assertEquals(8100, jdbcTemplate.queryForObject("SELECT rpm_cutoff FROM motors WHERE name = 'K20A2 2.0 VTEC'", Integer.class));
         assertEquals(7000, jdbcTemplate.queryForObject("SELECT rpm_cutoff FROM motors WHERE name = 'VQ35DE 3.5 V6 REVUP'", Integer.class));
+        assertEquals(6000, jdbcTemplate.queryForObject(
+                "SELECT rpm_cutoff FROM motors WHERE name = ? AND displacement_cc = 1239 AND compression_ratio = 9.2",
+                Integer.class, "C3G 720 1.2 8V"));
+        assertEquals(6500, jdbcTemplate.queryForObject(
+                "SELECT rpm_cutoff FROM motors WHERE name = ? AND displacement_cc = 1781 AND compression_ratio = 8.5",
+                Integer.class, "AP 1.8 8V CFI GASOLINA"));
         assertEquals(1L, jdbcTemplate.queryForObject("SELECT row_version FROM users WHERE id = 1", Long.class));
     }
 
     @Test
     void shouldRestoreMotorsAndRemoveLinkedChallengesAndAttempts() {
         transactionTemplate.executeWithoutResult(transactionStatus -> restorationService.restoreMotors());
-        assertEquals(2, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors", Integer.class));
+        assertEquals(8, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM motors", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM challenges", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM challenge_participations", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM challenge_progress", Integer.class));

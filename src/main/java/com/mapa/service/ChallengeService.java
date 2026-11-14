@@ -155,6 +155,7 @@ public class ChallengeService {
     }
 
     @Transactional
+    // Reinicia o progresso quando os requisitos do desafio mudam.
     public ChallengeResponseDTO update(Long challengeId, ChallengeRequestDTO request) {
         Challenge challenge = findEntityById(challengeId);
         requireOwnChallenge(challenge);
@@ -192,6 +193,7 @@ public class ChallengeService {
     }
 
     @Transactional
+    // Confirma a matrícula e deixa apenas um desafio selecionado por aluno.
     public ChallengeResponseDTO selectForStudent(Long challengeId) {
         UserPrincipal principal = currentPrincipal();
         requireRole(principal, Role.STUDENT, "selecionar desafios");
@@ -243,6 +245,7 @@ public class ChallengeService {
     }
 
     @Transactional
+    // Vincula a puxada ao desafio ativo quando motor e matrícula conferem. A conclusão exige os dois critérios.
     public void registerSimulationAttempts(User user, Motor motor, DynamometerTest dynamometerTest) {
         if (user == null || motor == null || dynamometerTest == null || user.getRole() != Role.STUDENT) {
             return;

@@ -45,7 +45,7 @@ public class AuthService {
     private static final String RESET_PASSWORD_MESSAGE = "Senha redefinida com sucesso.";
     private static final String EMAIL_SERVICE_UNAVAILABLE_MESSAGE =
             "Serviço de e-mail indisponível no momento. Tente novamente em instantes ou entre em contato com o suporte.";
-    private static final String TERMS_VERSION = "1.0";
+    private static final String TERMS_VERSION = "2.0";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -57,6 +57,7 @@ public class AuthService {
     private final UserAuditLogService userAuditLogService;
 
     @Transactional
+    // Valida o cadastro e registra a versão dos termos aceita.
     public UserResponseDTO register(RegisterRequestDTO request) {
         if (request.role() == Role.ADMIN) {
             throw new RoleNotAllowedException("Cadastro com perfil ADMIN não é permitido");
@@ -96,6 +97,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
+    // Autentica as credenciais e emite o token da sessão.
     public AuthResponseDTO login(LoginRequestDTO request) {
         String normalizedEmail = request.email().trim().toLowerCase();
         User user = userRepository.findByEmail(normalizedEmail)
@@ -119,6 +121,7 @@ public class AuthService {
     }
 
     @Transactional
+    // Usa uma resposta genérica para evitar revelar se a conta existe.
     public MessageResponseDTO forgotPassword(ForgotPasswordRequestDTO request) {
         if (emailDeliveryStatus.isUnavailable()) {
             throw new EmailDeliveryException(EMAIL_SERVICE_UNAVAILABLE_MESSAGE);
@@ -132,6 +135,7 @@ public class AuthService {
     }
 
     @Transactional
+    // Consome o token de recuperação e invalida as sessões anteriores.
     public MessageResponseDTO resetPassword(ResetPasswordRequestDTO request) {
         User user = userRepository.findByResetTokenForUpdate(request.token())
                 .filter(User::isActive)

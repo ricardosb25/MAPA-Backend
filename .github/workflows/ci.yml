@@ -70,4 +70,4 @@ jobs:
       - name: Executar Checkstyle
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon checkstyleMain checkstyleTest
+          ./gradlew --no-daemon checkstyleMain checkstyleTest checkstyleIntegrationTest
